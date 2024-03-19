@@ -1,0 +1,24 @@
+{
+  "name": "logstore-chunking",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@streamr/protocol": "^8.5.5",
+    "@streamr/utils": "^8.5.5",
+    "split2": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/split2": "^4.2.3",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.2"
+  }
+}
