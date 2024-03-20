@@ -1,6 +1,6 @@
 import { StreamMessage } from "@streamr/protocol";
 import data from "../data/data_5.json";
-import { QueryState } from "../src/QeryState";
+import { QueryState } from "../src/QueryState";
 
 const messageIds = data
   .map(StreamMessage.deserialize)

@@ -1,9 +1,9 @@
 import { MessageID, StreamMessage } from "@streamr/protocol";
 import { EthereumAddress } from "@streamr/utils";
 import { PassThrough } from "stream";
-import { QueryState } from "./QeryState";
 import { QueryParams, QueryRef } from "./QueryParams";
 import { QueryResponse } from "./QueryResponse";
+import { QueryState } from "./QueryState";
 import { Storage } from "./Storage";
 
 export class QueryAggregator extends PassThrough {
