@@ -5,6 +5,7 @@ import { QueryParams, QueryRef } from "./QueryParams";
 import { QueryResponse } from "./QueryResponse";
 import { QueryState } from "./QueryState";
 import { Storage } from "./Storage";
+import { QueryResponse } from "./protocol/QueryResponse";
 
 export class QueryAggregator extends PassThrough {
 
