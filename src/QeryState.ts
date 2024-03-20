@@ -43,7 +43,10 @@ export class QueryState {
   }
 
   public finalize() {
-    //   // TODO: Check?
+    if (this._isFinalized) {
+      throw new Error("Cannot finalize, the query is already finalized.")
+    }
+    this._isInitialized = true;
     this._isFinalized = true;
   }
 
