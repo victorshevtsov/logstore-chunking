@@ -1,6 +1,7 @@
 import { toEthereumAddress } from "@streamr/utils";
 import data from "../data/data_5.json";
 import { QueryAggregator } from "../src/QueryAggregator";
+import { ChunkCallback } from "../src/QueryChipper";
 import { QueryParams } from "../src/QueryParams";
 import { Storage } from "../src/Storage";
 import { createQueryResponse } from "./test-utils";
@@ -41,10 +42,16 @@ describe("QueryAggregator aggregates messages from", () => {
     }
   };
 
+  let chunks: any[];
   let messages: any[];
   let isFinished: boolean;
 
+  const chunkCallback: ChunkCallback = (chunk) => {
+    chunks.push(chunk);
+  }
+
   beforeEach(() => {
+    chunks = [];
     messages = [];
     isFinished = false;
   });
@@ -53,11 +60,12 @@ describe("QueryAggregator aggregates messages from", () => {
 
     test("if there is no data for the query", (done) => {
       const storage = new Storage([]);
-      const queryAggregator = new QueryAggregator(storage, queryParams, []);
+      const queryAggregator = new QueryAggregator(storage, queryParams, [], chunkCallback);
       queryAggregator.on("data", (data) => messages.push(data));
       queryAggregator.on("finish", () => isFinished = true);
 
       new TestSteps()
+        .add(() => expect(chunks).toHaveLength(1))
         .add(() => expect(messages).toHaveLength(0))
         .add(() => expect(isFinished).toBeTruthy())
         .run(done);
@@ -65,11 +73,12 @@ describe("QueryAggregator aggregates messages from", () => {
 
     test("if there is data for the query", (done) => {
       const storage = new Storage(data);
-      const queryAggregator = new QueryAggregator(storage, queryParams, []);
+      const queryAggregator = new QueryAggregator(storage, queryParams, [], chunkCallback);
       queryAggregator.on("data", (data) => messages.push(data));
       queryAggregator.on("finish", () => isFinished = true);
 
       new TestSteps()
+        .add(() => expect(chunks).toHaveLength(3))
         .add(() => expect(messages).toHaveLength(5))
         .add(() => expect(isFinished).toBeTruthy())
         .run(done);
@@ -85,7 +94,7 @@ describe("QueryAggregator aggregates messages from", () => {
 
       beforeEach(() => {
         messages = [];
-        queryAggregator = new QueryAggregator(storage, queryParams, [foreignNode1]);
+        queryAggregator = new QueryAggregator(storage, queryParams, [foreignNode1], chunkCallback);
         queryAggregator.on("data", (data) => messages.push(data));
         queryAggregator.on("finish", () => isFinished = true);
       });
@@ -148,7 +157,7 @@ describe("QueryAggregator aggregates messages from", () => {
 
       beforeEach(() => {
         messages = [];
-        queryAggregator = new QueryAggregator(storage, queryParams, [foreignNode1, foreignNode2]);
+        queryAggregator = new QueryAggregator(storage, queryParams, [foreignNode1, foreignNode2], chunkCallback);
         queryAggregator.on("data", (data) => messages.push(data));
         queryAggregator.on("finish", () => isFinished = true);
       });

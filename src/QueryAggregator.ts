@@ -1,8 +1,8 @@
 import { MessageID, StreamMessage } from "@streamr/protocol";
 import { EthereumAddress } from "@streamr/utils";
-import { PassThrough } from "stream";
+import { PassThrough, pipeline } from "stream";
+import { ChunkCallback, QueryChipper } from "./QueryChipper";
 import { QueryParams, QueryRef } from "./QueryParams";
-import { QueryResponse } from "./QueryResponse";
 import { QueryState } from "./QueryState";
 import { Storage } from "./Storage";
 import { QueryResponse } from "./protocol/QueryResponse";
@@ -11,6 +11,7 @@ export class QueryAggregator extends PassThrough {
 
   private readonly storage: Storage;
   private readonly queryParams: QueryParams;
+  private readonly chunkCallback: ChunkCallback
 
   private readonly primaryNodeState: QueryState;
   private readonly foreignNodeStates: Map<EthereumAddress, QueryState>;
@@ -18,11 +19,13 @@ export class QueryAggregator extends PassThrough {
   constructor(
     storage: Storage,
     queryParams: QueryParams,
-    onlineNodes: EthereumAddress[]) {
+    onlineNodes: EthereumAddress[],
+    chunkCallback: ChunkCallback) {
     super({ objectMode: true });
 
     this.storage = storage;
     this.queryParams = queryParams;
+    this.chunkCallback = chunkCallback;
 
     this.primaryNodeState = new QueryState();
     this.foreignNodeStates = new Map(
@@ -31,16 +34,21 @@ export class QueryAggregator extends PassThrough {
       )
     );
 
-    // TODO: Need a backpressure
-    const queryStream = this.storage.query(queryParams);
-    queryStream.on("data", (message: StreamMessage) => {
-      this.primaryNodeState.addMessageId(message.messageId);
-      this.doCheck();
-    });
-    queryStream.on("end", () => {
-      this.primaryNodeState.finalize();
-      this.doCheck();
-    });
+    pipeline(
+      this.storage.query(queryParams),
+      new QueryChipper(this.chunkCallback),
+      (err) => {
+        // TODO: Handle error
+      }
+    )
+      .on("data", (message: StreamMessage) => {
+        this.primaryNodeState.addMessageId(message.messageId);
+        this.doCheck();
+      })
+      .on("end", () => {
+        this.primaryNodeState.finalize();
+        this.doCheck();
+      });
   }
 
   private getOrCreateState(node: EthereumAddress) {
@@ -100,6 +108,7 @@ export class QueryAggregator extends PassThrough {
         to: readyTo,
       };
 
+      // TODO: Handle an errror if the pipe gets broken
       const queryStream = this.storage.query(queryParams);
       queryStream.pipe(this, { end: isFinalized });
 
