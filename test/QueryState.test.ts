@@ -8,7 +8,7 @@ const messageIds = data
 
 describe("QueryState", () => {
 
-  describe("calculates min and ma for a set of", () => {
+  describe("calculates min and max for a set of", () => {
     let queryState: QueryState;
 
     beforeEach(() => {
@@ -44,6 +44,61 @@ describe("QueryState", () => {
       expect(queryState.max?.timestamp).toEqual(messageIds[2].timestamp);
       expect(queryState.max?.sequenceNumber).toEqual(messageIds[2].sequenceNumber);
     });
+  });
+
+  describe("subtracts", () => {
+    let queryStateA: QueryState;
+    let queryStateB: QueryState;
+
+    beforeEach(() => {
+      queryStateA = new QueryState();
+      queryStateB = new QueryState();
+    });
+
+    test("empty from empty", () => {
+      const result = Array.from(queryStateA.subtract(queryStateB));
+      expect(result).toHaveLength(0);
+    })
+
+    test("empty from filled", () => {
+      queryStateA.addMessageId(messageIds[0]);
+      queryStateA.addMessageId(messageIds[1]);
+
+      const result = Array.from(queryStateA.subtract(queryStateB));
+      expect(result).toHaveLength(2);
+      expect(result).toEqual([messageIds[0], messageIds[1]]);
+    })
+
+    test("filled from empty", () => {
+      queryStateB.addMessageId(messageIds[0]);
+      queryStateB.addMessageId(messageIds[1]);
+
+      const result = Array.from(queryStateA.subtract(queryStateB));
+      expect(result).toHaveLength(0);
+    })
+
+    test("filled from filled if elements are the same", () => {
+      queryStateA.addMessageId(messageIds[0]);
+      queryStateA.addMessageId(messageIds[1]);
+
+      queryStateB.addMessageId(messageIds[0]);
+      queryStateB.addMessageId(messageIds[1]);
+
+      const result = Array.from(queryStateA.subtract(queryStateB));
+      expect(result).toHaveLength(0);
+    })
+
+    test("filled from filled if elements are not the same", () => {
+      queryStateA.addMessageId(messageIds[0]);
+      queryStateA.addMessageId(messageIds[1]);
+
+      queryStateB.addMessageId(messageIds[2]);
+      queryStateB.addMessageId(messageIds[3]);
+
+      const result = Array.from(queryStateA.subtract(queryStateB));
+      expect(result).toHaveLength(2);
+      expect(result).toEqual([messageIds[0], messageIds[1]]);
+    })
   });
 
   describe("shrinks a set of", () => {

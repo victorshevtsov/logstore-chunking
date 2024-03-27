@@ -24,12 +24,15 @@ export class QueryRef {
       return a;
     }
 
-    if (a.timestamp === b.timestamp &&
-      (a.sequenceNumber ?? MIN_SEQUENCE_NUMBER_VALUE) < (b.sequenceNumber ?? MIN_SEQUENCE_NUMBER_VALUE)) {
-      return a;
+    if (b.timestamp < a.timestamp) {
+      return b;
     }
 
-    return b;
+    if ((a.sequenceNumber ?? MIN_SEQUENCE_NUMBER_VALUE) < (b.sequenceNumber ?? MIN_SEQUENCE_NUMBER_VALUE)) {
+      return a;
+    } else {
+      return b;
+    }
   }
 
   static max(a: QueryRef | undefined, b: QueryRef | undefined) {
@@ -49,12 +52,15 @@ export class QueryRef {
       return a;
     }
 
-    if (a.timestamp === b.timestamp &&
-      (a.sequenceNumber ?? MIN_SEQUENCE_NUMBER_VALUE) > (b.sequenceNumber ?? MIN_SEQUENCE_NUMBER_VALUE)) {
-      return a;
+    if (b.timestamp > a.timestamp) {
+      return b;
     }
 
-    return b;
+    if ((a.sequenceNumber ?? MIN_SEQUENCE_NUMBER_VALUE) > (b.sequenceNumber ?? MIN_SEQUENCE_NUMBER_VALUE)) {
+      return a;
+    } else {
+      return b;
+    }
   }
 
   static equals(a: QueryRef, b: QueryRef) {

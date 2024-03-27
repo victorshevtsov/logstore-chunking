@@ -5,13 +5,13 @@ import { ChunkCallback, QueryChipper } from "./QueryChipper";
 import { QueryParams, QueryRef } from "./QueryParams";
 import { QueryState } from "./QueryState";
 import { Storage } from "./Storage";
+import { QueryPropagation } from "./protocol/QueryPropagation";
 import { QueryResponse } from "./protocol/QueryResponse";
 
 export class QueryAggregator extends PassThrough {
 
   private readonly storage: Storage;
   private readonly queryParams: QueryParams;
-  private readonly chunkCallback: ChunkCallback
 
   private readonly primaryNodeState: QueryState;
   private readonly foreignNodeStates: Map<EthereumAddress, QueryState>;
@@ -25,7 +25,6 @@ export class QueryAggregator extends PassThrough {
 
     this.storage = storage;
     this.queryParams = queryParams;
-    this.chunkCallback = chunkCallback;
 
     this.primaryNodeState = new QueryState();
     this.foreignNodeStates = new Map(
@@ -35,13 +34,14 @@ export class QueryAggregator extends PassThrough {
     );
 
     pipeline(
-      this.storage.query(queryParams),
-      new QueryChipper(this.chunkCallback),
+      this.storage.query(this.queryParams),
+      new QueryChipper(chunkCallback),
       (err) => {
         // TODO: Handle error
       }
     )
-      .on("data", (message: StreamMessage) => {
+      .on("data", (messageStr: string) => {
+        const message = StreamMessage.deserialize(messageStr);
         this.primaryNodeState.addMessageId(message.messageId);
         this.doCheck();
       })
@@ -62,7 +62,7 @@ export class QueryAggregator extends PassThrough {
     return state;
   }
 
-  public onResponse(node: EthereumAddress, response: QueryResponse) {
+  public onForeignResponse(node: EthereumAddress, response: QueryResponse) {
     const nodeQueryState = this.getOrCreateState(node);
 
     response.messageIds.forEach(messageIdStr => {
@@ -75,6 +75,23 @@ export class QueryAggregator extends PassThrough {
     if (response.isFinal) {
       nodeQueryState.finalize();
     }
+
+    this.doCheck();
+  }
+
+  public onPropagation(node: EthereumAddress, response: QueryPropagation) {
+    const nodeQueryState = this.getOrCreateState(node);
+
+    response.payload.forEach(messageStr => {
+      const message = StreamMessage.deserialize(messageStr);
+      this.storage.store(message)
+
+      // nodeQueryState.addMessageId(messageId)
+    });
+
+    // if (response.isFinal) {
+    //   nodeQueryState.finalize();
+    // }
 
     this.doCheck();
   }

@@ -1,38 +1,58 @@
-import { MessageID, StreamMessage } from "@streamr/protocol";
 import { PassThrough, TransformCallback } from "stream";
 
-const CHUNK_SIZE = 2;
+const LENGTH_LIMIT = 1000;
+const SIZE_LIMIT = 1024 * 1024;
 
-export type ChunkCallback = (chunk: MessageID[], isFinal: boolean) => void;
+export type ChunkCallback = (chunk: any[], isFinal: boolean) => void;
+
+interface ChunkOptions {
+  lengthLimit?: number;
+  sizeLimit?: number;
+}
 
 export class QueryChipper extends PassThrough {
+  private readonly lengthLimit: number;
+  private readonly sizeLimit: number;
   private readonly chunkCallback: ChunkCallback;
-  private readonly messsageIds: MessageID[] = [];
+  private readonly chunk: any[] = [];
+  private chunkSize: number = 0;
 
-  constructor(chunkCallback: ChunkCallback) {
+  constructor(
+    chunkCallback: ChunkCallback,
+    {
+      lengthLimit = LENGTH_LIMIT,
+      sizeLimit = SIZE_LIMIT,
+    }: ChunkOptions = {}) {
     super({ objectMode: true });
 
+    this.lengthLimit = lengthLimit;
+    this.sizeLimit = sizeLimit;
     this.chunkCallback = chunkCallback;
+
     this.on('finish', () => {
       this.finishCunkIfReady(true);
     });
   }
 
-  _transform(chunk: any, encoding: BufferEncoding, callback: TransformCallback): void {
-    const message = chunk as StreamMessage;
-    this.messsageIds.push(message.messageId);
+  _transform(data: any, _encoding: BufferEncoding, callback: TransformCallback): void {
+    this.chunk.push(data);
+    this.chunkSize += (data as string).length;
 
     try {
       this.finishCunkIfReady(false)
     } catch (err) {
       callback(err as Error);
     }
-    callback(null, chunk);
+    callback(null, data);
   }
 
   private finishCunkIfReady(isFinal: boolean) {
-    if (this.messsageIds.length >= CHUNK_SIZE || isFinal) {
-      this.chunkCallback(this.messsageIds.splice(0), isFinal);
+    if (
+      isFinal ||
+      this.chunk.length >= this.lengthLimit ||
+      this.chunkSize >= this.sizeLimit) {
+      this.chunkCallback(this.chunk.splice(0), isFinal);
+      this.chunkSize = 0;
     }
   }
 }

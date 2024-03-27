@@ -1,43 +1,131 @@
-import { MessageID } from "@streamr/protocol";
-import { pipeline } from "stream";
-import data from "../data/data_5.json";
-import { ChunkCallback, QueryChipper } from "../src/QueryChipper";
-import { QueryParams } from "../src/QueryParams";
-import { Storage } from "../src/Storage";
+import { PassThrough, pipeline } from "stream";
+import { QueryChipper } from "../src/QueryChipper";
 
 describe("QueryChipper", () => {
-  test("Works with a single Foreign Node", (done) => {
-    const storage = new Storage(data);
-    const queryParams: QueryParams = {
-      streamId: "0x19e7e376e7c213b7e7e7e46cc70a5dd086daff2a/pulse",
-      from: {
-        timestamp: 1710336591127,
-        sequenceNumber: 0,
-      },
-      to: {
-        timestamp: 1710357184411,
-        sequenceNumber: 0,
-      }
-    };
+  let chunkCallback: jest.Mock;
+  let sourceStreamMock: PassThrough;
+  let queryChipper: QueryChipper;
 
-    const chunks: MessageID[][] = [];
-    const chunkCallback: ChunkCallback = (chunk: MessageID[]) => {
-      chunks.push(chunk);
-      return null;
-    }
+  beforeEach(() => {
+    chunkCallback = jest.fn().mockImplementation();
+    sourceStreamMock = new PassThrough({ objectMode: true });
+  });
 
-    const queryStream = storage.query(queryParams);
-    const queryChipper = new QueryChipper(chunkCallback);
+  describe("chunk length limit: 2", () => {
 
-    pipeline(queryStream, queryChipper, (err) => {
-      if (err) {
-        console.error(err);
-      }
+    beforeEach(() => {
+      queryChipper = new QueryChipper(chunkCallback, { lengthLimit: 2 });
+    });
 
-      expect(chunks).toHaveLength(3);
+    test("calls the callback with an empty final chunk", (done) => {
+      pipeline(sourceStreamMock, queryChipper, (err) => {
+        if (err) {
+          done(err);
+          return;
+        }
 
-      done();
+        try {
+          expect(chunkCallback).toHaveBeenNthCalledWith(1, [], true);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      });
+
+      sourceStreamMock.push(null);
+    });
+
+    test("calls the callback with a final chunk of 1 element", (done) => {
+      pipeline(sourceStreamMock, queryChipper, (err) => {
+        if (err) {
+          done(err);
+          return;
+        }
+
+        try {
+          expect(chunkCallback).toHaveBeenNthCalledWith(1, ["element-00"], true);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      });
+      sourceStreamMock.push("element-00");
+      sourceStreamMock.push(null);
+    });
+
+    test("calls the callback with a chunk of 2 elements followed by an empty final chunk", (done) => {
+      pipeline(sourceStreamMock, queryChipper, (err) => {
+        if (err) {
+          done(err);
+          return;
+        }
+
+        try {
+          expect(chunkCallback).toHaveBeenNthCalledWith(1, ["element-00", "element-01"], false);
+          expect(chunkCallback).toHaveBeenNthCalledWith(2, [], true);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      });
+
+      sourceStreamMock.push("element-00");
+      sourceStreamMock.push("element-01");
+      sourceStreamMock.push(null);
+    });
+
+    test("calls the callback with a chunk of 2 elements followed by a final chunk of 1 element", (done) => {
+      pipeline(sourceStreamMock, queryChipper, (err) => {
+        if (err) {
+          done(err);
+          return;
+        }
+
+        try {
+          expect(chunkCallback).toHaveBeenNthCalledWith(1, ["element-00", "element-01"], false);
+          expect(chunkCallback).toHaveBeenNthCalledWith(2, ["element-02"], true);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      });
+
+      sourceStreamMock.push("element-00");
+      sourceStreamMock.push("element-01");
+      sourceStreamMock.push("element-02");
+      sourceStreamMock.push(null);
+    });
+  });
+
+  describe("chunk size limit: 20", () => {
+
+    beforeEach(() => {
+      queryChipper = new QueryChipper(chunkCallback, { sizeLimit: 20 });
+    });
+
+    test("calls the callback with a chunk of 2 elements followed by an empty final chunk", (done) => {
+      pipeline(sourceStreamMock, queryChipper, (err) => {
+        if (err) {
+          done(err);
+          return;
+        }
+
+        try {
+          expect(chunkCallback).toHaveBeenNthCalledWith(1, ["element-00", "element-01"], false);
+          expect(chunkCallback).toHaveBeenNthCalledWith(2, [], true);
+          done();
+        } catch (error) {
+          done(error);
+        }
+      });
+
+      sourceStreamMock.push("element-00");
+      sourceStreamMock.push("element-01");
+      sourceStreamMock.push(null);
     });
 
   });
+
+  // TODO: Cover the cases with error handling
+
 });

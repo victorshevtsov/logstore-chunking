@@ -30,11 +30,24 @@ export class QueryState {
       return undefined;
     }
 
-
     return {
       timestamp: this._messageIds[this._messageIds.length - 1].timestamp,
       sequenceNumber: this._messageIds[this._messageIds.length - 1].sequenceNumber,
     }
+  }
+
+  public subtract(messageIds: Iterable<MessageID>) {
+    const result = new Map<string, MessageID>(this._messageIds.map(m => [m.serialize(), m]));
+
+    for (const messageId of messageIds) {
+      result.delete(messageId.serialize());
+    }
+
+    return result.values();
+  }
+
+  *[Symbol.iterator]() {
+    yield* this._messageIds;
   }
 
   public addMessageId(messageId: MessageID) {
