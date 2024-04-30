@@ -1,20 +1,19 @@
-import data from "../data/data_5.json";
+import { MessageRef } from "@streamr/protocol";
 import { Storage } from "../src/Storage";
-
-const streamId = "0x19e7e376e7c213b7e7e7e46cc70a5dd086daff2a/pulse";
+import { STREAM_ID, fillStorageWithRange, mockStreamMessage } from "./test-utils";
 
 describe("Storage", () => {
-  const storage = new Storage(data);
+  const storage = new Storage();
+
+  beforeEach(() => {
+    fillStorageWithRange(storage, 100200300, 100200400);
+  });
 
   test("query", async () => {
     const queryStream = storage.query({
-      streamId,
-      from: {
-        timestamp: 1710336591127,
-      },
-      to: {
-        timestamp: 1710357184411,
-      },
+      streamId: STREAM_ID,
+      from: new MessageRef(100200300, 0),
+      to: new MessageRef(100200309, 0),
     });
 
     const messages = [];
@@ -22,20 +21,18 @@ describe("Storage", () => {
       messages.push(message);
     }
 
-    expect(messages).toHaveLength(5);
+    expect(messages).toHaveLength(10);
   });
 
   test("query", async () => {
+
+    const msg = mockStreamMessage({ timestamp: 100200300, sequenceNumber: 1 });
+    storage.store(msg);
+
     const queryStream = storage.query({
-      streamId,
-      from: {
-        timestamp: 1710336591127,
-        sequenceNumber: 1,
-      },
-      to: {
-        timestamp: 1710357181407,
-        sequenceNumber: 1,
-      },
+      streamId: STREAM_ID,
+      from: new MessageRef(100200300, 1),
+      to: new MessageRef(100200300, 1,),
     });
 
     const messages = [];

@@ -1,13 +1,13 @@
+import { MessageRef } from "@streamr/protocol";
+
 export class QueryResponse {
   public readonly requestId: string;
   public readonly isFinal: boolean;
-  public readonly messageIds: string[] = [];
-  // public readonly hashMap: Map<string, string>;
+  public readonly messageRefs: MessageRef[] = [];
 
-  constructor(requestId: string, messageIds: string[], isFinal: boolean) {
+  constructor(requestId: string, messageRefs: MessageRef[], isFinal: boolean) {
     this.requestId = requestId;
     this.isFinal = isFinal;
-    this.messageIds = messageIds;
-    // this.hashMap = new Map();
+    this.messageRefs = messageRefs;
   }
 }

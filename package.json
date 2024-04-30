@@ -10,9 +10,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@streamr/protocol": "^8.5.5",
-    "@streamr/utils": "^8.5.5",
-    "split2": "^4.2.0"
+    "@streamr/protocol": "^100.2.3",
+    "@streamr/sdk": "^100.2.3",
+    "@streamr/trackerless-network": "^100.2.3",
+    "@streamr/utils": "^100.2.3"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",

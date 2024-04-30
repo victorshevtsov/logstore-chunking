@@ -1,22 +1,21 @@
+import { MessageRef } from "@streamr/protocol";
+import { convertStreamMessageToBytes } from "@streamr/trackerless-network";
 import { PassThrough, Readable } from "stream";
-import data from "../data/data_5.json";
 import { QueryParams } from "../src/QueryParams";
 import { QueryPropagator } from "../src/QueryPropagator";
 import { Storage } from "../src/Storage";
-import { createQueryResponse } from "./test-utils";
+import { STREAM_ID, createQueryResponse, mockStreamMessageRange } from "./test-utils";
 
 describe("QueryPropagator", () => {
+  const data = Array
+    .from(mockStreamMessageRange(100200300, 100200309))
+    .map(m => convertStreamMessageToBytes(m));
+
   const requestId = "request-001";
   const queryParams: QueryParams = {
-    streamId: "0x19e7e376e7c213b7e7e7e46cc70a5dd086daff2a/pulse",
-    from: {
-      timestamp: 1710336591127,
-      sequenceNumber: 0,
-    },
-    to: {
-      timestamp: 1710357184411,
-      sequenceNumber: 0,
-    }
+    streamId: STREAM_ID,
+    from: new MessageRef(1710336591127, 0),
+    to: new MessageRef(1710357184411, 0),
   };
 
   let responseChunkCallbackMock: jest.Mock;

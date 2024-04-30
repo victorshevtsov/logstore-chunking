@@ -1,12 +1,11 @@
-import { MessageID } from "@streamr/protocol";
-import { QueryRef } from "./QueryParams";
+import { MessageRef } from "@streamr/protocol";
 
 export class QueryState {
   private _isInitialized: boolean = false;
   private _isFinalizedResponse: boolean = false;
   private _isFinalizedPropagation: boolean = false;
-  private _lastPropagatedMessageId: MessageID | undefined;
-  private readonly _messageIds: MessageID[] = [];
+  private _lastPropagatedMessageRef: MessageRef | undefined;
+  private readonly _messageRefs: MessageRef[] = [];
 
   public get isInitialized() {
     return this._isInitialized;
@@ -21,53 +20,52 @@ export class QueryState {
   }
 
   public get lastPropagatedMessageId() {
-    return this._lastPropagatedMessageId;
+    return this._lastPropagatedMessageRef;
   }
 
-  public get min(): QueryRef | undefined {
-    if (!this._messageIds.length) {
+  public get min(): MessageRef | undefined {
+    if (!this._messageRefs.length) {
       return undefined;
     }
 
-    return {
-      timestamp: this._messageIds[0].timestamp,
-      sequenceNumber: this._messageIds[0].sequenceNumber,
-    }
+    return new MessageRef(
+      this._messageRefs[0].timestamp,
+      this._messageRefs[0].sequenceNumber
+    );
   }
 
-  public get max(): QueryRef | undefined {
-    if (!this._messageIds.length) {
+  public get max(): MessageRef | undefined {
+    if (!this._messageRefs.length) {
       return undefined;
     }
 
-    return {
-      timestamp: this._messageIds[this._messageIds.length - 1].timestamp,
-      sequenceNumber: this._messageIds[this._messageIds.length - 1].sequenceNumber,
-    }
+    return new MessageRef(
+      this._messageRefs[this._messageRefs.length - 1].timestamp,
+      this._messageRefs[this._messageRefs.length - 1].sequenceNumber);
   }
 
-  public subtract(messageIds: Iterable<MessageID>) {
-    const result = new Map<string, MessageID>(this._messageIds.map(m => [m.serialize(), m]));
+  public subtract(messageRefs: Iterable<MessageRef>) {
+    const result = new Set<MessageRef>(this._messageRefs.map(m => m));
 
-    for (const messageId of messageIds) {
-      result.delete(messageId.serialize());
+    for (const messageRef of messageRefs) {
+      result.delete(messageRef);
     }
 
     return result.values();
   }
 
   *[Symbol.iterator]() {
-    yield* this._messageIds;
+    yield* this._messageRefs;
   }
 
-  public addResponseMessageId(messageId: MessageID) {
+  public addResponseMessageRef(messageRef: MessageRef) {
     this._isInitialized = true;
-    this._messageIds.push(messageId);
+    this._messageRefs.push(messageRef);
   }
 
-  public addPropagationMessageId(messageId: MessageID) {
+  public addPropagationMessageRef(messageRef: MessageRef) {
     this._isInitialized = true;
-    this._lastPropagatedMessageId = messageId;
+    this._lastPropagatedMessageRef = messageRef;
   }
 
   public finalizeResponse() {
@@ -86,23 +84,23 @@ export class QueryState {
     this._isFinalizedPropagation = true;
   }
 
-  public shrink(queryRef: QueryRef) {
+  public shrink(messageRef: MessageRef) {
     let count = 0;
     let index = 0;
-    while (index < this._messageIds.length) {
-      const messageId = this._messageIds[index];
+    while (index < this._messageRefs.length) {
+      const messageId = this._messageRefs[index];
 
       if (
-        (messageId.timestamp < queryRef.timestamp) ||
+        (messageId.timestamp < messageRef.timestamp) ||
         (
-          messageId.timestamp === queryRef.timestamp &&
-          messageId.sequenceNumber <= queryRef.sequenceNumber!
+          messageId.timestamp === messageRef.timestamp &&
+          messageId.sequenceNumber <= messageRef.sequenceNumber!
         )
       ) {
         count++;
       }
 
-      if (messageId.timestamp > queryRef.timestamp) {
+      if (messageId.timestamp > messageRef.timestamp) {
         break;
       }
 
@@ -110,7 +108,7 @@ export class QueryState {
     }
 
     if (count > 0) {
-      this._messageIds.splice(0, count);
+      this._messageRefs.splice(0, count);
     }
   }
 }

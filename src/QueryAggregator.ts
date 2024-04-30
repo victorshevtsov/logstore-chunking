@@ -1,8 +1,9 @@
-import { MessageID, StreamMessage } from "@streamr/protocol";
+import { convertBytesToStreamMessage } from "@streamr/trackerless-network";
 import { EthereumAddress } from "@streamr/utils";
 import { PassThrough, pipeline } from "stream";
+import { minMessageRef } from "./MessageRef";
 import { ChunkCallback, QueryChipper } from "./QueryChipper";
-import { QueryParams, QueryRef } from "./QueryParams";
+import { QueryParams } from "./QueryParams";
 import { QueryState } from "./QueryState";
 import { Storage } from "./Storage";
 import { QueryPropagation } from "./protocol/QueryPropagation";
@@ -40,9 +41,9 @@ export class QueryAggregator extends PassThrough {
         // TODO: Handle error
       }
     )
-      .on("data", (messageStr: string) => {
-        const message = StreamMessage.deserialize(messageStr);
-        this.primaryNodeState.addResponseMessageId(message.messageId);
+      .on("data", (bytes: Uint8Array) => {
+        const message = convertBytesToStreamMessage(bytes);
+        this.primaryNodeState.addResponseMessageRef(message.messageId.toMessageRef());
         this.doCheck();
       })
       .on("end", () => {
@@ -65,11 +66,8 @@ export class QueryAggregator extends PassThrough {
   public onForeignResponse(node: EthereumAddress, response: QueryResponse) {
     const foreignNodeState = this.getOrCreateState(node);
 
-    response.messageIds.forEach(messageIdStr => {
-      const messageIdJson = JSON.parse(messageIdStr);
-      // @ts-expect-error Property 'fromArray' does not exist on type 'typeof MessageID'
-      const messageId = MessageID.fromArray(messageIdJson);
-      foreignNodeState.addResponseMessageId(messageId)
+    response.messageRefs.forEach(messageRef => {
+      foreignNodeState.addResponseMessageRef(messageRef)
     });
 
     if (response.isFinal) {
@@ -82,11 +80,11 @@ export class QueryAggregator extends PassThrough {
   public onPropagation(node: EthereumAddress, response: QueryPropagation) {
     const foreignNodeState = this.getOrCreateState(node);
 
-    response.payload.forEach(async messageStr => {
-      const message = StreamMessage.deserialize(messageStr);
+    response.payload.forEach(async bytes => {
+      const message = convertBytesToStreamMessage(bytes);
       await this.storage.store(message)
 
-      foreignNodeState.addPropagationMessageId(message.messageId)
+      foreignNodeState.addPropagationMessageRef(message.messageId.toMessageRef())
     });
 
     if (response.isFinal) {
@@ -116,8 +114,8 @@ export class QueryAggregator extends PassThrough {
         return;
       }
 
-      readyFrom = QueryRef.min(readyFrom, foreignNodeState.min);
-      readyTo = QueryRef.min(readyTo, foreignNodeState.max);
+      readyFrom = minMessageRef(readyFrom, foreignNodeState.min);
+      readyTo = minMessageRef(readyTo, foreignNodeState.max);
       isFinalized &&= foreignNodeState.isFinalizedResponse;
     }
 

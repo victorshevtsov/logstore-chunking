@@ -1,26 +1,23 @@
+import { MessageRef } from "@streamr/protocol";
+import { convertStreamMessageToBytes } from "@streamr/trackerless-network";
 import { toEthereumAddress } from "@streamr/utils";
 import { PassThrough, pipeline } from "stream";
-import data from "../data/data_5.json";
 import { QueryAggregator } from "../src/QueryAggregator";
 import { QueryParams } from "../src/QueryParams";
 import { Storage } from "../src/Storage";
-import { createQueryPropagation, createQueryResponse } from "./test-utils";
+import { STREAM_ID, createQueryPropagation, createQueryResponse, mockStreamMessageRange } from "./test-utils";
 
 describe("QueryAggregator aggregates messages from", () => {
 
   const requestId = "request-001";
   const queryParams: QueryParams = {
-    streamId: "0x19e7e376e7c213b7e7e7e46cc70a5dd086daff2a/pulse",
-    from: {
-      timestamp: 1710336591127,
-      sequenceNumber: 0,
-    },
-    to: {
-      timestamp: 1710357184411,
-      sequenceNumber: 0,
-    }
+    streamId: STREAM_ID,
+    from: new MessageRef(100200300, 0),
+    to: new MessageRef(100200301, 0),
   };
 
+
+  let data: Uint8Array[];
   let responseChunkCallbackMock: jest.Mock;
 
   let queryStreamMock: PassThrough;
@@ -29,6 +26,10 @@ describe("QueryAggregator aggregates messages from", () => {
   let queryAggregator: QueryAggregator;
 
   beforeEach(() => {
+    data = Array
+      .from(mockStreamMessageRange(100200300, 100200309))
+      .map(m => convertStreamMessageToBytes(m));
+
     responseChunkCallbackMock = jest.fn().mockImplementation();
     queryStreamMock = new PassThrough({ objectMode: true });
     responseStreamMock = new PassThrough({ objectMode: true });

@@ -1,10 +1,9 @@
-import { StreamMessage } from "@streamr/protocol";
-import data from "../data/data_5.json";
+import { MessageRef } from "@streamr/protocol";
 import { QueryState } from "../src/QueryState";
+import { mockStreamMessageRange } from "./test-utils";
 
-const messageIds = data
-  .map(StreamMessage.deserialize)
-  .map(m => m.messageId);
+const messageRefs = Array.from(mockStreamMessageRange(100200300, 100200309))
+  .map(m => m.messageId.toMessageRef());
 
 describe("QueryState", () => {
 
@@ -16,33 +15,33 @@ describe("QueryState", () => {
     });
 
     it("1 MessageID", () => {
-      queryState.addResponseMessageId(messageIds[0]);
+      queryState.addResponseMessageRef(messageRefs[0]);
 
-      expect(queryState.min?.timestamp).toEqual(messageIds[0].timestamp);
-      expect(queryState.min?.sequenceNumber).toEqual(messageIds[0].sequenceNumber);
-      expect(queryState.max?.timestamp).toEqual(messageIds[0].timestamp);
-      expect(queryState.max?.sequenceNumber).toEqual(messageIds[0].sequenceNumber);
+      expect(queryState.min?.timestamp).toEqual(messageRefs[0].timestamp);
+      expect(queryState.min?.sequenceNumber).toEqual(messageRefs[0].sequenceNumber);
+      expect(queryState.max?.timestamp).toEqual(messageRefs[0].timestamp);
+      expect(queryState.max?.sequenceNumber).toEqual(messageRefs[0].sequenceNumber);
     });
 
     it("2 MessageIDs", () => {
-      queryState.addResponseMessageId(messageIds[0]);
-      queryState.addResponseMessageId(messageIds[1]);
+      queryState.addResponseMessageRef(messageRefs[0]);
+      queryState.addResponseMessageRef(messageRefs[1]);
 
-      expect(queryState.min?.timestamp).toEqual(messageIds[0].timestamp);
-      expect(queryState.min?.sequenceNumber).toEqual(messageIds[0].sequenceNumber);
-      expect(queryState.max?.timestamp).toEqual(messageIds[1].timestamp);
-      expect(queryState.max?.sequenceNumber).toEqual(messageIds[1].sequenceNumber);
+      expect(queryState.min?.timestamp).toEqual(messageRefs[0].timestamp);
+      expect(queryState.min?.sequenceNumber).toEqual(messageRefs[0].sequenceNumber);
+      expect(queryState.max?.timestamp).toEqual(messageRefs[1].timestamp);
+      expect(queryState.max?.sequenceNumber).toEqual(messageRefs[1].sequenceNumber);
     });
 
     it("3 MessageIDs", () => {
-      queryState.addResponseMessageId(messageIds[0]);
-      queryState.addResponseMessageId(messageIds[1]);
-      queryState.addResponseMessageId(messageIds[2]);
+      queryState.addResponseMessageRef(messageRefs[0]);
+      queryState.addResponseMessageRef(messageRefs[1]);
+      queryState.addResponseMessageRef(messageRefs[2]);
 
-      expect(queryState.min?.timestamp).toEqual(messageIds[0].timestamp);
-      expect(queryState.min?.sequenceNumber).toEqual(messageIds[0].sequenceNumber);
-      expect(queryState.max?.timestamp).toEqual(messageIds[2].timestamp);
-      expect(queryState.max?.sequenceNumber).toEqual(messageIds[2].sequenceNumber);
+      expect(queryState.min?.timestamp).toEqual(messageRefs[0].timestamp);
+      expect(queryState.min?.sequenceNumber).toEqual(messageRefs[0].sequenceNumber);
+      expect(queryState.max?.timestamp).toEqual(messageRefs[2].timestamp);
+      expect(queryState.max?.sequenceNumber).toEqual(messageRefs[2].sequenceNumber);
     });
   });
 
@@ -61,43 +60,43 @@ describe("QueryState", () => {
     })
 
     test("empty from filled", () => {
-      queryStateA.addResponseMessageId(messageIds[0]);
-      queryStateA.addResponseMessageId(messageIds[1]);
+      queryStateA.addResponseMessageRef(messageRefs[0]);
+      queryStateA.addResponseMessageRef(messageRefs[1]);
 
       const result = Array.from(queryStateA.subtract(queryStateB));
       expect(result).toHaveLength(2);
-      expect(result).toEqual([messageIds[0], messageIds[1]]);
+      expect(result).toEqual([messageRefs[0], messageRefs[1]]);
     })
 
     test("filled from empty", () => {
-      queryStateB.addResponseMessageId(messageIds[0]);
-      queryStateB.addResponseMessageId(messageIds[1]);
+      queryStateB.addResponseMessageRef(messageRefs[0]);
+      queryStateB.addResponseMessageRef(messageRefs[1]);
 
       const result = Array.from(queryStateA.subtract(queryStateB));
       expect(result).toHaveLength(0);
     })
 
     test("filled from filled if elements are the same", () => {
-      queryStateA.addResponseMessageId(messageIds[0]);
-      queryStateA.addResponseMessageId(messageIds[1]);
+      queryStateA.addResponseMessageRef(messageRefs[0]);
+      queryStateA.addResponseMessageRef(messageRefs[1]);
 
-      queryStateB.addResponseMessageId(messageIds[0]);
-      queryStateB.addResponseMessageId(messageIds[1]);
+      queryStateB.addResponseMessageRef(messageRefs[0]);
+      queryStateB.addResponseMessageRef(messageRefs[1]);
 
       const result = Array.from(queryStateA.subtract(queryStateB));
       expect(result).toHaveLength(0);
     })
 
     test("filled from filled if elements are not the same", () => {
-      queryStateA.addResponseMessageId(messageIds[0]);
-      queryStateA.addResponseMessageId(messageIds[1]);
+      queryStateA.addResponseMessageRef(messageRefs[0]);
+      queryStateA.addResponseMessageRef(messageRefs[1]);
 
-      queryStateB.addResponseMessageId(messageIds[2]);
-      queryStateB.addResponseMessageId(messageIds[3]);
+      queryStateB.addResponseMessageRef(messageRefs[2]);
+      queryStateB.addResponseMessageRef(messageRefs[3]);
 
       const result = Array.from(queryStateA.subtract(queryStateB));
       expect(result).toHaveLength(2);
-      expect(result).toEqual([messageIds[0], messageIds[1]]);
+      expect(result).toEqual([messageRefs[0], messageRefs[1]]);
     })
   });
 
@@ -110,35 +109,27 @@ describe("QueryState", () => {
 
     describe("1 element", () => {
       beforeEach(() => {
-        queryState.addResponseMessageId(messageIds[0]);
+        queryState.addResponseMessageRef(messageRefs[0]);
       });
 
       it("if the slice is less than the element", () => {
-        queryState.shrink({
-          timestamp: messageIds[0].timestamp - 1,
-          sequenceNumber: 0,
-        });
+        queryState.shrink(new MessageRef(messageRefs[0].timestamp - 1, 0));
 
-        expect(queryState.min?.timestamp).toEqual(messageIds[0].timestamp);
-        expect(queryState.min?.sequenceNumber).toEqual(messageIds[0].sequenceNumber);
-        expect(queryState.max?.timestamp).toEqual(messageIds[0].timestamp);
-        expect(queryState.max?.sequenceNumber).toEqual(messageIds[0].sequenceNumber);
+        expect(queryState.min?.timestamp).toEqual(messageRefs[0].timestamp);
+        expect(queryState.min?.sequenceNumber).toEqual(messageRefs[0].sequenceNumber);
+        expect(queryState.max?.timestamp).toEqual(messageRefs[0].timestamp);
+        expect(queryState.max?.sequenceNumber).toEqual(messageRefs[0].sequenceNumber);
       })
 
       it("if the slice is equual to the element", () => {
-        queryState.shrink({
-          timestamp: messageIds[0].timestamp,
-          sequenceNumber: messageIds[0].sequenceNumber,
-        });
+        queryState.shrink(new MessageRef(messageRefs[0].timestamp, messageRefs[0].sequenceNumber));
 
         expect(queryState.min).toBeUndefined();
         expect(queryState.max).toBeUndefined();
       })
 
       it("if the slice is greater than the element", () => {
-        queryState.shrink({
-          timestamp: messageIds[0].timestamp + 1
-        });
+        queryState.shrink(new MessageRef(messageRefs[0].timestamp + 1, 0));
 
         expect(queryState.min).toBeUndefined();
         expect(queryState.max).toBeUndefined();
@@ -148,48 +139,37 @@ describe("QueryState", () => {
 
     describe("2 elements", () => {
       beforeEach(() => {
-        queryState.addResponseMessageId(messageIds[0]);
-        queryState.addResponseMessageId(messageIds[1]);
+        queryState.addResponseMessageRef(messageRefs[0]);
+        queryState.addResponseMessageRef(messageRefs[1]);
       });
 
       it("if the slice is less than the 1st element", () => {
-        queryState.shrink({
-          timestamp: messageIds[0].timestamp - 1,
-          sequenceNumber: 0,
-        });
+        queryState.shrink(new MessageRef(messageRefs[0].timestamp - 1, 0));
 
-        expect(queryState.min?.timestamp).toEqual(messageIds[0].timestamp);
-        expect(queryState.min?.sequenceNumber).toEqual(messageIds[0].sequenceNumber);
-        expect(queryState.max?.timestamp).toEqual(messageIds[1].timestamp);
-        expect(queryState.max?.sequenceNumber).toEqual(messageIds[1].sequenceNumber);
+        expect(queryState.min?.timestamp).toEqual(messageRefs[0].timestamp);
+        expect(queryState.min?.sequenceNumber).toEqual(messageRefs[0].sequenceNumber);
+        expect(queryState.max?.timestamp).toEqual(messageRefs[1].timestamp);
+        expect(queryState.max?.sequenceNumber).toEqual(messageRefs[1].sequenceNumber);
       })
 
       it("if the slice is equual to the 1st element", () => {
-        queryState.shrink({
-          timestamp: messageIds[0].timestamp,
-          sequenceNumber: messageIds[0].sequenceNumber,
-        });
+        queryState.shrink(new MessageRef(messageRefs[0].timestamp, messageRefs[0].sequenceNumber));
 
-        expect(queryState.min?.timestamp).toEqual(messageIds[1].timestamp);
-        expect(queryState.min?.sequenceNumber).toEqual(messageIds[1].sequenceNumber);
-        expect(queryState.max?.timestamp).toEqual(messageIds[1].timestamp);
-        expect(queryState.max?.sequenceNumber).toEqual(messageIds[1].sequenceNumber);
+        expect(queryState.min?.timestamp).toEqual(messageRefs[1].timestamp);
+        expect(queryState.min?.sequenceNumber).toEqual(messageRefs[1].sequenceNumber);
+        expect(queryState.max?.timestamp).toEqual(messageRefs[1].timestamp);
+        expect(queryState.max?.sequenceNumber).toEqual(messageRefs[1].sequenceNumber);
       })
 
       it("if the slice is equual to the 2nd element", () => {
-        queryState.shrink({
-          timestamp: messageIds[1].timestamp,
-          sequenceNumber: messageIds[1].sequenceNumber,
-        });
+        queryState.shrink(new MessageRef(messageRefs[1].timestamp, messageRefs[1].sequenceNumber));
 
         expect(queryState.min).toBeUndefined();
         expect(queryState.max).toBeUndefined();
       })
 
       it("if the slice is greater than the 2nd element", () => {
-        queryState.shrink({
-          timestamp: messageIds[1].timestamp + 1
-        });
+        queryState.shrink(new MessageRef(messageRefs[1].timestamp + 1, 0));
 
         expect(queryState.min).toBeUndefined();
         expect(queryState.max).toBeUndefined();
@@ -198,75 +178,58 @@ describe("QueryState", () => {
 
     describe("3 elements", () => {
       beforeEach(() => {
-        queryState.addResponseMessageId(messageIds[0]);
-        queryState.addResponseMessageId(messageIds[1]);
-        queryState.addResponseMessageId(messageIds[2]);
+        queryState.addResponseMessageRef(messageRefs[0]);
+        queryState.addResponseMessageRef(messageRefs[1]);
+        queryState.addResponseMessageRef(messageRefs[2]);
       });
 
       it("if the slice is less than the 1st element", () => {
-        queryState.shrink({
-          timestamp: messageIds[0].timestamp - 1,
-          sequenceNumber: 0,
-        });
+        queryState.shrink(new MessageRef(messageRefs[0].timestamp - 1, 0));
 
-        expect(queryState.min?.timestamp).toEqual(messageIds[0].timestamp);
-        expect(queryState.min?.sequenceNumber).toEqual(messageIds[0].sequenceNumber);
-        expect(queryState.max?.timestamp).toEqual(messageIds[2].timestamp);
-        expect(queryState.max?.sequenceNumber).toEqual(messageIds[2].sequenceNumber);
+        expect(queryState.min?.timestamp).toEqual(messageRefs[0].timestamp);
+        expect(queryState.min?.sequenceNumber).toEqual(messageRefs[0].sequenceNumber);
+        expect(queryState.max?.timestamp).toEqual(messageRefs[2].timestamp);
+        expect(queryState.max?.sequenceNumber).toEqual(messageRefs[2].sequenceNumber);
       })
 
       it("if the slice is equual to the 1st element", () => {
-        queryState.shrink({
-          timestamp: messageIds[0].timestamp,
-          sequenceNumber: messageIds[0].sequenceNumber,
-        });
+        queryState.shrink(new MessageRef(messageRefs[0].timestamp, messageRefs[0].sequenceNumber));
 
-        expect(queryState.min?.timestamp).toEqual(messageIds[1].timestamp);
-        expect(queryState.min?.sequenceNumber).toEqual(messageIds[1].sequenceNumber);
-        expect(queryState.max?.timestamp).toEqual(messageIds[2].timestamp);
-        expect(queryState.max?.sequenceNumber).toEqual(messageIds[2].sequenceNumber);
+        expect(queryState.min?.timestamp).toEqual(messageRefs[1].timestamp);
+        expect(queryState.min?.sequenceNumber).toEqual(messageRefs[1].sequenceNumber);
+        expect(queryState.max?.timestamp).toEqual(messageRefs[2].timestamp);
+        expect(queryState.max?.sequenceNumber).toEqual(messageRefs[2].sequenceNumber);
       })
 
       it("if the slice is between the 1st and the 2nd elements", () => {
-        queryState.shrink({
-          timestamp: messageIds[0].timestamp,
-          sequenceNumber: messageIds[0].sequenceNumber + 1,
-        });
+        queryState.shrink(new MessageRef(messageRefs[0].timestamp, messageRefs[0].sequenceNumber + 1));
 
-        expect(queryState.min?.timestamp).toEqual(messageIds[1].timestamp);
-        expect(queryState.min?.sequenceNumber).toEqual(messageIds[1].sequenceNumber);
-        expect(queryState.max?.timestamp).toEqual(messageIds[2].timestamp);
-        expect(queryState.max?.sequenceNumber).toEqual(messageIds[2].sequenceNumber);
+        expect(queryState.min?.timestamp).toEqual(messageRefs[1].timestamp);
+        expect(queryState.min?.sequenceNumber).toEqual(messageRefs[1].sequenceNumber);
+        expect(queryState.max?.timestamp).toEqual(messageRefs[2].timestamp);
+        expect(queryState.max?.sequenceNumber).toEqual(messageRefs[2].sequenceNumber);
       })
 
       it("if the slice is equual to the 2nd element", () => {
-        queryState.shrink({
-          timestamp: messageIds[1].timestamp,
-          sequenceNumber: messageIds[1].sequenceNumber,
-        });
+        queryState.shrink(new MessageRef(messageRefs[1].timestamp, messageRefs[1].sequenceNumber));
 
-        expect(queryState.min?.timestamp).toEqual(messageIds[2].timestamp);
-        expect(queryState.min?.sequenceNumber).toEqual(messageIds[2].sequenceNumber);
-        expect(queryState.max?.timestamp).toEqual(messageIds[2].timestamp);
-        expect(queryState.max?.sequenceNumber).toEqual(messageIds[2].sequenceNumber);
+        expect(queryState.min?.timestamp).toEqual(messageRefs[2].timestamp);
+        expect(queryState.min?.sequenceNumber).toEqual(messageRefs[2].sequenceNumber);
+        expect(queryState.max?.timestamp).toEqual(messageRefs[2].timestamp);
+        expect(queryState.max?.sequenceNumber).toEqual(messageRefs[2].sequenceNumber);
       })
 
       it("if the slice is between the 2nd and the 3d elements", () => {
-        queryState.shrink({
-          timestamp: messageIds[1].timestamp + 1,
-          sequenceNumber: messageIds[1].sequenceNumber,
-        });
+        queryState.shrink(new MessageRef(messageRefs[1].timestamp, messageRefs[1].sequenceNumber + 1));
 
-        expect(queryState.min?.timestamp).toEqual(messageIds[2].timestamp);
-        expect(queryState.min?.sequenceNumber).toEqual(messageIds[2].sequenceNumber);
-        expect(queryState.max?.timestamp).toEqual(messageIds[2].timestamp);
-        expect(queryState.max?.sequenceNumber).toEqual(messageIds[2].sequenceNumber);
+        expect(queryState.min?.timestamp).toEqual(messageRefs[2].timestamp);
+        expect(queryState.min?.sequenceNumber).toEqual(messageRefs[2].sequenceNumber);
+        expect(queryState.max?.timestamp).toEqual(messageRefs[2].timestamp);
+        expect(queryState.max?.sequenceNumber).toEqual(messageRefs[2].sequenceNumber);
       })
 
       it("if the slice is greater than the 3rd element", () => {
-        queryState.shrink({
-          timestamp: messageIds[2].timestamp + 1
-        });
+        queryState.shrink(new MessageRef(messageRefs[2].timestamp + 1, 0));
 
         expect(queryState.min).toBeUndefined();
         expect(queryState.max).toBeUndefined();

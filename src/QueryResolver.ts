@@ -3,8 +3,8 @@ import { Writable, pipeline } from "stream";
 import { QueryAggregator } from "./QueryAggregator";
 import { ChunkCallback, QueryChipper } from "./QueryChipper";
 import { QueryParams } from "./QueryParams";
-import { QueryResponse } from "./protocol/QueryResponse";
 import { Storage } from "./Storage";
+import { QueryResponse } from "./protocol/QueryResponse";
 
 export class QueryResolver {
   private storage: Storage;

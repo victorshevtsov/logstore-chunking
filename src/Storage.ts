@@ -1,17 +1,28 @@
 import { MessageID, StreamMessage } from '@streamr/protocol';
+import { convertBytesToStreamMessage, convertStreamMessageToBytes } from '@streamr/trackerless-network';
 import { Readable, Transform, pipeline } from "stream";
-import { MAX_SEQUENCE_NUMBER_VALUE, MIN_SEQUENCE_NUMBER_VALUE, QueryParams } from "./QueryParams";
+import { MAX_SEQUENCE_NUMBER_VALUE, MIN_SEQUENCE_NUMBER_VALUE } from './MessageRef';
+import { QueryParams } from "./QueryParams";
 
 export class Storage {
-  private readonly data: string[];
+  private readonly data: Uint8Array[];
 
-  constructor(data: string[]) {
+  constructor(data: Uint8Array[] = []) {
     this.data = data;
   }
 
-  public async store(message: StreamMessage<unknown>) {
-    this.data.push(message.serialize());
-    this.data.sort();
+  public async store(message: StreamMessage) {
+    this.data.push(convertStreamMessageToBytes(message));
+
+    this.data.sort((a: Uint8Array, b: Uint8Array) => {
+      const msgA = convertBytesToStreamMessage(a);
+      const msgB = convertBytesToStreamMessage(b);
+
+      const msgRefA = msgA.messageId.toMessageRef();
+      const msgRefB = msgB.messageId.toMessageRef();
+
+      return msgRefA.compareTo(msgRefB);
+    });
   }
 
   public query(params: QueryParams): Readable {
@@ -21,9 +32,7 @@ export class Storage {
         objectMode: true,
         transform(chunk, encoding, callback) {
           try {
-            const chunkStr = chunk.toString()
-            const chunkJSON = JSON.parse(chunkStr);
-            const message = StreamMessage.deserialize(chunkJSON);
+            const message = convertBytesToStreamMessage(chunk);
             const messageId = message.messageId;
 
             if (messageId.streamId === params.streamId &&
@@ -57,9 +66,7 @@ export class Storage {
         objectMode: true,
         transform(chunk, encoding, callback) {
           try {
-            const chunkStr = chunk.toString()
-            const chunkJSON = JSON.parse(chunkStr);
-            const message = StreamMessage.deserialize(chunkJSON);
+            const message = convertBytesToStreamMessage(chunk);
             const messageId = message.messageId;
 
             if (messageIds.includes(messageId)) {
