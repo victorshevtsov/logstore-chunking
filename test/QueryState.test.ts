@@ -16,7 +16,7 @@ describe("QueryState", () => {
     });
 
     it("1 MessageID", () => {
-      queryState.addMessageId(messageIds[0]);
+      queryState.addResponseMessageId(messageIds[0]);
 
       expect(queryState.min?.timestamp).toEqual(messageIds[0].timestamp);
       expect(queryState.min?.sequenceNumber).toEqual(messageIds[0].sequenceNumber);
@@ -25,8 +25,8 @@ describe("QueryState", () => {
     });
 
     it("2 MessageIDs", () => {
-      queryState.addMessageId(messageIds[0]);
-      queryState.addMessageId(messageIds[1]);
+      queryState.addResponseMessageId(messageIds[0]);
+      queryState.addResponseMessageId(messageIds[1]);
 
       expect(queryState.min?.timestamp).toEqual(messageIds[0].timestamp);
       expect(queryState.min?.sequenceNumber).toEqual(messageIds[0].sequenceNumber);
@@ -35,9 +35,9 @@ describe("QueryState", () => {
     });
 
     it("3 MessageIDs", () => {
-      queryState.addMessageId(messageIds[0]);
-      queryState.addMessageId(messageIds[1]);
-      queryState.addMessageId(messageIds[2]);
+      queryState.addResponseMessageId(messageIds[0]);
+      queryState.addResponseMessageId(messageIds[1]);
+      queryState.addResponseMessageId(messageIds[2]);
 
       expect(queryState.min?.timestamp).toEqual(messageIds[0].timestamp);
       expect(queryState.min?.sequenceNumber).toEqual(messageIds[0].sequenceNumber);
@@ -61,8 +61,8 @@ describe("QueryState", () => {
     })
 
     test("empty from filled", () => {
-      queryStateA.addMessageId(messageIds[0]);
-      queryStateA.addMessageId(messageIds[1]);
+      queryStateA.addResponseMessageId(messageIds[0]);
+      queryStateA.addResponseMessageId(messageIds[1]);
 
       const result = Array.from(queryStateA.subtract(queryStateB));
       expect(result).toHaveLength(2);
@@ -70,30 +70,30 @@ describe("QueryState", () => {
     })
 
     test("filled from empty", () => {
-      queryStateB.addMessageId(messageIds[0]);
-      queryStateB.addMessageId(messageIds[1]);
+      queryStateB.addResponseMessageId(messageIds[0]);
+      queryStateB.addResponseMessageId(messageIds[1]);
 
       const result = Array.from(queryStateA.subtract(queryStateB));
       expect(result).toHaveLength(0);
     })
 
     test("filled from filled if elements are the same", () => {
-      queryStateA.addMessageId(messageIds[0]);
-      queryStateA.addMessageId(messageIds[1]);
+      queryStateA.addResponseMessageId(messageIds[0]);
+      queryStateA.addResponseMessageId(messageIds[1]);
 
-      queryStateB.addMessageId(messageIds[0]);
-      queryStateB.addMessageId(messageIds[1]);
+      queryStateB.addResponseMessageId(messageIds[0]);
+      queryStateB.addResponseMessageId(messageIds[1]);
 
       const result = Array.from(queryStateA.subtract(queryStateB));
       expect(result).toHaveLength(0);
     })
 
     test("filled from filled if elements are not the same", () => {
-      queryStateA.addMessageId(messageIds[0]);
-      queryStateA.addMessageId(messageIds[1]);
+      queryStateA.addResponseMessageId(messageIds[0]);
+      queryStateA.addResponseMessageId(messageIds[1]);
 
-      queryStateB.addMessageId(messageIds[2]);
-      queryStateB.addMessageId(messageIds[3]);
+      queryStateB.addResponseMessageId(messageIds[2]);
+      queryStateB.addResponseMessageId(messageIds[3]);
 
       const result = Array.from(queryStateA.subtract(queryStateB));
       expect(result).toHaveLength(2);
@@ -110,7 +110,7 @@ describe("QueryState", () => {
 
     describe("1 element", () => {
       beforeEach(() => {
-        queryState.addMessageId(messageIds[0]);
+        queryState.addResponseMessageId(messageIds[0]);
       });
 
       it("if the slice is less than the element", () => {
@@ -148,8 +148,8 @@ describe("QueryState", () => {
 
     describe("2 elements", () => {
       beforeEach(() => {
-        queryState.addMessageId(messageIds[0]);
-        queryState.addMessageId(messageIds[1]);
+        queryState.addResponseMessageId(messageIds[0]);
+        queryState.addResponseMessageId(messageIds[1]);
       });
 
       it("if the slice is less than the 1st element", () => {
@@ -198,9 +198,9 @@ describe("QueryState", () => {
 
     describe("3 elements", () => {
       beforeEach(() => {
-        queryState.addMessageId(messageIds[0]);
-        queryState.addMessageId(messageIds[1]);
-        queryState.addMessageId(messageIds[2]);
+        queryState.addResponseMessageId(messageIds[0]);
+        queryState.addResponseMessageId(messageIds[1]);
+        queryState.addResponseMessageId(messageIds[2]);
       });
 
       it("if the slice is less than the 1st element", () => {

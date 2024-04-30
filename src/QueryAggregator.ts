@@ -42,11 +42,11 @@ export class QueryAggregator extends PassThrough {
     )
       .on("data", (messageStr: string) => {
         const message = StreamMessage.deserialize(messageStr);
-        this.primaryNodeState.addMessageId(message.messageId);
+        this.primaryNodeState.addResponseMessageId(message.messageId);
         this.doCheck();
       })
       .on("end", () => {
-        this.primaryNodeState.finalize();
+        this.primaryNodeState.finalizeResponse();
         this.doCheck();
       });
   }
@@ -63,35 +63,35 @@ export class QueryAggregator extends PassThrough {
   }
 
   public onForeignResponse(node: EthereumAddress, response: QueryResponse) {
-    const nodeQueryState = this.getOrCreateState(node);
+    const foreignNodeState = this.getOrCreateState(node);
 
     response.messageIds.forEach(messageIdStr => {
       const messageIdJson = JSON.parse(messageIdStr);
       // @ts-expect-error Property 'fromArray' does not exist on type 'typeof MessageID'
       const messageId = MessageID.fromArray(messageIdJson);
-      nodeQueryState.addMessageId(messageId)
+      foreignNodeState.addResponseMessageId(messageId)
     });
 
     if (response.isFinal) {
-      nodeQueryState.finalize();
+      foreignNodeState.finalizeResponse();
     }
 
     this.doCheck();
   }
 
   public onPropagation(node: EthereumAddress, response: QueryPropagation) {
-    const nodeQueryState = this.getOrCreateState(node);
+    const foreignNodeState = this.getOrCreateState(node);
 
-    response.payload.forEach(messageStr => {
+    response.payload.forEach(async messageStr => {
       const message = StreamMessage.deserialize(messageStr);
-      this.storage.store(message)
+      await this.storage.store(message)
 
-      // nodeQueryState.addMessageId(messageId)
+      foreignNodeState.addPropagationMessageId(message.messageId)
     });
 
-    // if (response.isFinal) {
-    //   nodeQueryState.finalize();
-    // }
+    if (response.isFinal) {
+      foreignNodeState.finalizePropagation();
+    }
 
     this.doCheck();
   }
@@ -103,19 +103,22 @@ export class QueryAggregator extends PassThrough {
 
     let readyFrom = this.primaryNodeState.min;
     let readyTo = this.primaryNodeState.max;
-    let isFinalized = this.primaryNodeState.isFinalized;
+    let isFinalized = this.primaryNodeState.isFinalizedResponse;
 
-    for (const [, state] of this.foreignNodeStates) {
-      if (!state.isInitialized) {
+    for (const [, foreignNodeState] of this.foreignNodeStates) {
+      if (!foreignNodeState.isInitialized) {
         return;
       }
-      if (!state.isFinalized && (!state.min || !state.max)) {
+      if (
+        !foreignNodeState.isFinalizedResponse &&
+        (!foreignNodeState.min || !foreignNodeState.max)
+      ) {
         return;
       }
 
-      readyFrom = QueryRef.min(readyFrom, state.min);
-      readyTo = QueryRef.min(readyTo, state.max);
-      isFinalized &&= state.isFinalized;
+      readyFrom = QueryRef.min(readyFrom, foreignNodeState.min);
+      readyTo = QueryRef.min(readyTo, foreignNodeState.max);
+      isFinalized &&= foreignNodeState.isFinalizedResponse;
     }
 
     if (readyFrom && readyTo) {

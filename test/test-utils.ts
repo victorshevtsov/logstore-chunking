@@ -1,13 +1,15 @@
 import { StreamMessage } from "@streamr/protocol";
+import { QueryPropagation } from "../src/protocol/QueryPropagation";
 import { QueryResponse } from "../src/protocol/QueryResponse";
 
-export function createQueryResponse(requestId: string, records: string[], isFinal: boolean) {
-  const queryResponse = new QueryResponse(requestId, isFinal);
+export function createQueryResponse(requestId: string, serializedMessages: string[], isFinal: boolean) {
+  const messageIds = serializedMessages.map(serializedMessage =>
+    StreamMessage.deserialize(serializedMessage).messageId.serialize()
+  );
 
-  records.forEach(messageStr => {
-    const messageId = StreamMessage.deserialize(messageStr).messageId;
-    queryResponse.messageIds.push(messageId.serialize());
-  })
+  return new QueryResponse(requestId, messageIds, isFinal);
+}
 
-  return queryResponse;
+export function createQueryPropagation(requestId: string, serializedMessages: string[], isFinal: boolean) {
+  return new QueryPropagation(requestId, serializedMessages, isFinal);
 }

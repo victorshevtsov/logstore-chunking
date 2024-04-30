@@ -1,4 +1,4 @@
-import { StreamMessage } from '@streamr/protocol';
+import { MessageID, StreamMessage } from '@streamr/protocol';
 import { Readable, Transform, pipeline } from "stream";
 import { MAX_SEQUENCE_NUMBER_VALUE, MIN_SEQUENCE_NUMBER_VALUE, QueryParams } from "./QueryParams";
 
@@ -7,6 +7,11 @@ export class Storage {
 
   constructor(data: string[]) {
     this.data = data;
+  }
+
+  public async store(message: StreamMessage<unknown>) {
+    this.data.push(message.serialize());
+    this.data.sort();
   }
 
   public query(params: QueryParams): Readable {
@@ -29,6 +34,35 @@ export class Storage {
                 messageId.timestamp === params.to.timestamp &&
                 messageId.sequenceNumber <= (params.to.sequenceNumber ?? MAX_SEQUENCE_NUMBER_VALUE)
               )) {
+              this.push(message);
+            }
+            callback();
+          } catch (err) {
+            callback(err as Error);
+          }
+        },
+      }),
+      (err) => {
+        if (err) {
+          console.error(err);
+        }
+      }
+    );
+  }
+
+  public queryByMessageIds(messageIds: MessageID[]): Readable {
+    return pipeline(
+      Readable.from(this.data),
+      new Transform({
+        objectMode: true,
+        transform(chunk, encoding, callback) {
+          try {
+            const chunkStr = chunk.toString()
+            const chunkJSON = JSON.parse(chunkStr);
+            const message = StreamMessage.deserialize(chunkJSON);
+            const messageId = message.messageId;
+
+            if (messageIds.includes(messageId)) {
               this.push(message);
             }
             callback();

@@ -3,15 +3,25 @@ import { QueryRef } from "./QueryParams";
 
 export class QueryState {
   private _isInitialized: boolean = false;
-  private _isFinalized: boolean = false;
+  private _isFinalizedResponse: boolean = false;
+  private _isFinalizedPropagation: boolean = false;
+  private _lastPropagatedMessageId: MessageID | undefined;
   private readonly _messageIds: MessageID[] = [];
 
   public get isInitialized() {
     return this._isInitialized;
   }
 
-  public get isFinalized() {
-    return this._isFinalized;
+  public get isFinalizedResponse() {
+    return this._isFinalizedResponse;
+  }
+
+  public get isFinalizedPropagation() {
+    return this._isFinalizedPropagation;
+  }
+
+  public get lastPropagatedMessageId() {
+    return this._lastPropagatedMessageId;
   }
 
   public get min(): QueryRef | undefined {
@@ -50,17 +60,30 @@ export class QueryState {
     yield* this._messageIds;
   }
 
-  public addMessageId(messageId: MessageID) {
+  public addResponseMessageId(messageId: MessageID) {
     this._isInitialized = true;
     this._messageIds.push(messageId);
   }
 
-  public finalize() {
-    if (this._isFinalized) {
-      throw new Error("Cannot finalize, the query is already finalized.")
+  public addPropagationMessageId(messageId: MessageID) {
+    this._isInitialized = true;
+    this._lastPropagatedMessageId = messageId;
+  }
+
+  public finalizeResponse() {
+    if (this._isFinalizedResponse) {
+      throw new Error("Cannot finalize response, it isalready finalized.")
     }
     this._isInitialized = true;
-    this._isFinalized = true;
+    this._isFinalizedResponse = true;
+  }
+
+  public finalizePropagation() {
+    if (this._isFinalizedPropagation) {
+      throw new Error("Cannot finalize propagation, is is already finalized.")
+    }
+    // this._isInitialized = true;
+    this._isFinalizedPropagation = true;
   }
 
   public shrink(queryRef: QueryRef) {

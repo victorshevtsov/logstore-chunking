@@ -41,11 +41,11 @@ export class QueryPropagator {
     )
       .on("data", (messageStr: string) => {
         const message = StreamMessage.deserialize(messageStr);
-        this.foreignNodeState.addMessageId(message.messageId);
+        this.foreignNodeState.addResponseMessageId(message.messageId);
         this.doCheck();
       })
       .on("end", () => {
-        this.foreignNodeState.finalize();
+        this.foreignNodeState.finalizeResponse();
         this.doCheck();
       });
 
@@ -67,28 +67,28 @@ export class QueryPropagator {
       const messageIdJson = JSON.parse(messageIdStr);
       // @ts-expect-error Property 'fromArray' does not exist on type 'typeof MessageID'
       const messageId = MessageID.fromArray(messageIdJson);
-      this.primaryNodeState.addMessageId(messageId)
+      this.primaryNodeState.addResponseMessageId(messageId)
     });
 
     if (response.isFinal) {
-      this.primaryNodeState.finalize();
+      this.primaryNodeState.finalizeResponse();
     }
 
     this.doCheck();
   }
 
   private doCheck() {
-    let isFinalized = this.primaryNodeState.isFinalized && this.foreignNodeState.isFinalized;
+    let isFinalized = this.primaryNodeState.isFinalizedResponse && this.foreignNodeState.isFinalizedResponse;
 
     if (
-      !this.primaryNodeState.isFinalized && !this.primaryNodeState.max ||
-      !this.foreignNodeState.isFinalized && !this.foreignNodeState.max
+      !this.primaryNodeState.isFinalizedResponse && !this.primaryNodeState.max ||
+      !this.foreignNodeState.isFinalizedResponse && !this.foreignNodeState.max
     ) {
       return;
     }
 
-    const primaryNodeShrink = this.primaryNodeState.isFinalized ? undefined : this.primaryNodeState.max;
-    const foreignNodeShrink = this.foreignNodeState.isFinalized ? undefined : this.foreignNodeState.max;
+    const primaryNodeShrink = this.primaryNodeState.isFinalizedResponse ? undefined : this.primaryNodeState.max;
+    const foreignNodeShrink = this.foreignNodeState.isFinalizedResponse ? undefined : this.foreignNodeState.max;
     const shrinkQueryRef = QueryRef.min(primaryNodeShrink, foreignNodeShrink);
 
     if (shrinkQueryRef) {
