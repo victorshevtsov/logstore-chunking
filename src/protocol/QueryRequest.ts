@@ -49,7 +49,6 @@ interface QueryRequestOptions {
   consumerId: string;
   streamId: string;
   partition: number;
-  queryType: QueryType;
   queryOptions: QueryOptions;
 }
 
@@ -58,7 +57,6 @@ export class QueryRequest {
   consumerId: string;
   streamId: string;
   partition: number;
-  queryType: QueryType;
   queryOptions: QueryOptions;
 
   constructor({
@@ -66,7 +64,6 @@ export class QueryRequest {
     consumerId,
     streamId,
     partition,
-    queryType,
     queryOptions,
   }: QueryRequestOptions) {
     // TODO: Validate the arguments
@@ -74,7 +71,6 @@ export class QueryRequest {
     this.consumerId = consumerId;
     this.streamId = streamId;
     this.partition = partition;
-    this.queryType = queryType;
     this.queryOptions = queryOptions;
   }
 }

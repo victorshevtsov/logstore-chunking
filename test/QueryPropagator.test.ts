@@ -16,7 +16,6 @@ describe("QueryPropagator", () => {
     consumerId: "consumerId",
     streamId: STREAM_ID,
     partition: STREAM_PARTITION,
-    queryType: QueryType.Range,
     queryOptions: {
       queryType: QueryType.Range,
       from: new MessageRef(100200300, 0),
