@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "tsc -b tsconfig.node.json",
     "test": "jest"
   },
   "keywords": [],
