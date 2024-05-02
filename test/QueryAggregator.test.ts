@@ -1,7 +1,7 @@
 import { MessageRef } from "@streamr/protocol";
 import { convertStreamMessageToBytes } from "@streamr/trackerless-network";
 import { toEthereumAddress } from "@streamr/utils";
-import { PassThrough, pipeline } from "stream";
+import { PassThrough, Readable, pipeline } from "stream";
 import { QueryAggregator } from "../src/QueryAggregator";
 import { Storage } from "../src/Storage";
 import { QueryRequest, QueryType } from "../src/protocol/QueryRequest";
@@ -22,9 +22,14 @@ describe("QueryAggregator aggregates messages from", () => {
   });
 
   let data: Uint8Array[];
+  let result: Uint8Array[];
+
   let responseChunkCallbackMock: jest.Mock;
 
-  let queryStreamMock: PassThrough;
+  let queryStreamMock1: Readable;
+  let queryStreamMock2: Readable;
+  let queryStreamMock3: Readable;
+  let queryStreamMock4: Readable;
   let responseStreamMock: PassThrough;
   let storage: Storage;
   let queryAggregator: QueryAggregator;
@@ -33,12 +38,25 @@ describe("QueryAggregator aggregates messages from", () => {
     data = Array
       .from(mockStreamMessageRange(100200300, 100200309))
       .map(m => convertStreamMessageToBytes(m));
+    result = [];
 
     responseChunkCallbackMock = jest.fn().mockImplementation();
-    queryStreamMock = new PassThrough({ objectMode: true });
-    responseStreamMock = new PassThrough({ objectMode: true });
+    queryStreamMock1 = new Readable({ objectMode: true });
+    queryStreamMock2 = new Readable({ objectMode: true });
+    queryStreamMock3 = new Readable({ objectMode: true });
+    queryStreamMock4 = new Readable({ objectMode: true });
+    responseStreamMock = new PassThrough({ objectMode: true })
+      .on("data", (data) => {
+        result.push(data)
+      });
+
     storage = jest.mocked<Storage>({
-      query: jest.fn().mockImplementation(() => queryStreamMock),
+      query: jest.fn()
+        // .mockImplementation(() => queryStreamMock1),
+        .mockImplementationOnce(() => queryStreamMock1)
+        .mockImplementationOnce(() => queryStreamMock2)
+        .mockImplementationOnce(() => queryStreamMock3)
+        .mockImplementationOnce(() => queryStreamMock4),
       store: jest.fn().mockImplementation(),
     } as unknown as Storage, { shallow: true });
   });
@@ -55,13 +73,15 @@ describe("QueryAggregator aggregates messages from", () => {
           expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
           expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [], true);
 
+          expect(result).toEqual([]);
+
           done(err);
         } catch (e) {
           done(e);
         }
       });
 
-      queryStreamMock.push(null);
+      queryStreamMock1.push(null);
     });
 
     test("if there is data for the query", (done) => {
@@ -70,14 +90,19 @@ describe("QueryAggregator aggregates messages from", () => {
           expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
           expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [data[0]], true);
 
+          expect(result).toEqual([data[0]]);
+
           done(err);
         } catch (e) {
           done(e);
         }
       });
 
-      queryStreamMock.push(data[0]);
-      queryStreamMock.push(null);
+      queryStreamMock1.push(data[0]);
+      queryStreamMock1.push(null);
+
+      queryStreamMock2.push(data[0]);
+      queryStreamMock2.push(null);
     });
   });
 
@@ -100,17 +125,19 @@ describe("QueryAggregator aggregates messages from", () => {
         }
       });
 
-      queryStreamMock.push(null);
+      queryStreamMock1.push(null);
 
       queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [], true));
     });
 
-    describe("if the primary node has the same data as the foreign node ", () => {
+    describe("if the primary node has the same data as the foreign node", () => {
       test("and the foreign node responds with a single response", (done) => {
         pipeline(queryAggregator, responseStreamMock, (err) => {
           try {
             expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
             expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [data[0], data[1], data[2]], true);
+
+            expect(result).toEqual([data[0], data[1], data[2]]);
 
             done(err);
           } catch (e) {
@@ -118,10 +145,19 @@ describe("QueryAggregator aggregates messages from", () => {
           }
         });
 
-        queryStreamMock.push(data[0]);
-        queryStreamMock.push(data[1]);
-        queryStreamMock.push(data[2]);
-        queryStreamMock.push(null);
+        queryStreamMock1.push(data[0]);
+        queryStreamMock1.push(data[1]);
+        queryStreamMock1.push(data[2]);
+        queryStreamMock1.push(null);
+
+        queryStreamMock2.push(data[0]);
+        queryStreamMock2.push(null);
+
+        queryStreamMock3.push(data[1]);
+        queryStreamMock3.push(null);
+
+        queryStreamMock4.push(data[2]);
+        queryStreamMock4.push(null);
 
         queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[0], data[1], data[2]], true));
       });
@@ -132,16 +168,27 @@ describe("QueryAggregator aggregates messages from", () => {
             expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
             expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [data[0], data[1], data[2]], true);
 
+            expect(result).toEqual([data[0], data[1], data[2]]);
+
             done(err);
           } catch (e) {
             done(e);
           }
         });
 
-        queryStreamMock.push(data[0]);
-        queryStreamMock.push(data[1]);
-        queryStreamMock.push(data[2]);
-        queryStreamMock.push(null);
+        queryStreamMock1.push(data[0]);
+        queryStreamMock1.push(data[1]);
+        queryStreamMock1.push(data[2]);
+        queryStreamMock1.push(null);
+
+        queryStreamMock2.push(data[0]);
+        queryStreamMock2.push(null);
+
+        queryStreamMock3.push(data[1]);
+        queryStreamMock3.push(null);
+
+        queryStreamMock4.push(data[2]);
+        queryStreamMock4.push(null);
 
         queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[0], data[1]], false));
         queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[2]], true));
@@ -153,16 +200,27 @@ describe("QueryAggregator aggregates messages from", () => {
             expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
             expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [data[0], data[1], data[2]], true);
 
+            expect(result).toEqual([data[0], data[1], data[2]]);
+
             done(err);
           } catch (e) {
             done(e);
           }
         });
 
-        queryStreamMock.push(data[0]);
-        queryStreamMock.push(data[1]);
-        queryStreamMock.push(data[2]);
-        queryStreamMock.push(null);
+        queryStreamMock1.push(data[0]);
+        queryStreamMock1.push(data[1]);
+        queryStreamMock1.push(data[2]);
+        queryStreamMock1.push(null);
+
+        queryStreamMock2.push(data[0]);
+        queryStreamMock2.push(null);
+
+        queryStreamMock3.push(data[1]);
+        queryStreamMock3.push(null);
+
+        queryStreamMock4.push(data[2]);
+        queryStreamMock4.push(null);
 
         queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[0]], false));
         queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[1]], false));
@@ -170,11 +228,13 @@ describe("QueryAggregator aggregates messages from", () => {
       });
     });
 
-    test("if the primary node has data for the query but the foreign node does not ", (done) => {
+    test("if the primary node has data for the query but the foreign node does not", (done) => {
       pipeline(queryAggregator, responseStreamMock, (err) => {
         try {
           expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
           expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [data[0]], true);
+
+          expect(result).toEqual([data[0]]);
 
           done(err);
         } catch (e) {
@@ -182,17 +242,22 @@ describe("QueryAggregator aggregates messages from", () => {
         }
       });
 
-      queryStreamMock.push(data[0]);
-      queryStreamMock.push(null);
+      queryStreamMock1.push(data[0]);
+      queryStreamMock1.push(null);
+
+      queryStreamMock2.push(data[0]);
+      queryStreamMock2.push(null);
 
       queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [], true));
     });
 
-    test.skip("if the primary node does not have data for the query but the foreign node does ", (done) => {
+    test("if the primary node does not have data for the query but the foreign node does", (done) => {
       pipeline(queryAggregator, responseStreamMock, (err) => {
         try {
           expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
-          expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [data[0]], true);
+          expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [], true);
+
+          expect(result).toEqual([data[0]]);
 
           done(err);
         } catch (e) {
@@ -200,7 +265,10 @@ describe("QueryAggregator aggregates messages from", () => {
         }
       });
 
-      queryStreamMock.push(null);
+      queryStreamMock1.push(null);
+
+      queryStreamMock2.push(data[0]);
+      queryStreamMock2.push(null);
 
       queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[0]], true));
       queryAggregator.onPropagation(foreignNode1, createQueryPropagation(REQUEST_ID, [data[0]], true));
@@ -221,23 +289,27 @@ describe("QueryAggregator aggregates messages from", () => {
           expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
           expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [], true);
 
+          expect(result).toEqual([]);
+
           done(err);
         } catch (e) {
           done(e);
         }
       });
 
-      queryStreamMock.push(null);
+      queryStreamMock1.push(null);
 
       queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [], true));
       queryAggregator.onForeignResponse(foreignNode2, createQueryResponse(REQUEST_ID, [], true));
     });
 
-    test("if the primary node has the same data as both foreign nodes ", (done) => {
+    test("if the primary node has the same data as both foreign nodes", (done) => {
       pipeline(queryAggregator, responseStreamMock, (err) => {
         try {
           expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
           expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [data[0]], true);
+
+          expect(result).toEqual([data[0]]);
 
           done(err);
         } catch (e) {
@@ -245,8 +317,11 @@ describe("QueryAggregator aggregates messages from", () => {
         }
       });
 
-      queryStreamMock.push(data[0]);
-      queryStreamMock.push(null);
+      queryStreamMock1.push(data[0]);
+      queryStreamMock1.push(null);
+
+      queryStreamMock2.push(data[0]);
+      queryStreamMock2.push(null);
 
       queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[0]], true));
       queryAggregator.onForeignResponse(foreignNode2, createQueryResponse(REQUEST_ID, [data[0]], true));
@@ -258,16 +333,27 @@ describe("QueryAggregator aggregates messages from", () => {
           expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
           expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [data[0], data[1], data[2]], true);
 
+          expect(result).toEqual([data[0], data[1], data[2]]);
+
           done(err);
         } catch (e) {
           done(e);
         }
       });
 
-      queryStreamMock.push(data[0]);
-      queryStreamMock.push(data[1]);
-      queryStreamMock.push(data[2]);
-      queryStreamMock.push(null);
+      queryStreamMock1.push(data[0]);
+      queryStreamMock1.push(data[1]);
+      queryStreamMock1.push(data[2]);
+      queryStreamMock1.push(null);
+
+      queryStreamMock2.push(data[0]);
+      queryStreamMock2.push(null);
+
+      queryStreamMock3.push(data[1]);
+      queryStreamMock3.push(null);
+
+      queryStreamMock4.push(data[2]);
+      queryStreamMock4.push(null);
 
       queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[1]], true));
       queryAggregator.onForeignResponse(foreignNode2, createQueryResponse(REQUEST_ID, [data[2]], true));

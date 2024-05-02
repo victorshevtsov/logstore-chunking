@@ -55,7 +55,8 @@ export class QueryAggregator extends PassThrough {
     )
       .on("data", (bytes: Uint8Array) => {
         const message = convertBytesToStreamMessage(bytes);
-        this.primaryNodeState.addResponseMessageRef(message.messageId.toMessageRef());
+        const messageRef = message.messageId.toMessageRef()
+        this.primaryNodeState.addResponseMessageRef(messageRef);
         this.doCheck();
       })
       .on("end", () => {
@@ -94,9 +95,10 @@ export class QueryAggregator extends PassThrough {
 
     response.payload.forEach(async bytes => {
       const message = convertBytesToStreamMessage(bytes);
-      await this.storage.store(message)
+      await this.storage.store(message);
 
-      foreignNodeState.addPropagationMessageRef(message.messageId.toMessageRef())
+      const messageRef = message.messageId.toMessageRef();
+      foreignNodeState.addPropagationMessageRef(messageRef)
     });
 
     if (response.isFinal) {

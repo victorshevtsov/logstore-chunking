@@ -2,7 +2,8 @@ import { MessageRef } from "@streamr/protocol";
 import { QueryState } from "../src/QueryState";
 import { mockStreamMessageRange } from "./test-utils";
 
-const messageRefs = Array.from(mockStreamMessageRange(100200300, 100200309))
+const messageRefs = Array
+  .from(mockStreamMessageRange(100200300, 100200309))
   .map(m => m.messageId.toMessageRef());
 
 describe("QueryState", () => {
@@ -14,7 +15,7 @@ describe("QueryState", () => {
       queryState = new QueryState();
     });
 
-    it("1 MessageID", () => {
+    it("1 MessageRef", () => {
       queryState.addResponseMessageRef(messageRefs[0]);
 
       expect(queryState.min?.timestamp).toEqual(messageRefs[0].timestamp);
@@ -23,7 +24,7 @@ describe("QueryState", () => {
       expect(queryState.max?.sequenceNumber).toEqual(messageRefs[0].sequenceNumber);
     });
 
-    it("2 MessageIDs", () => {
+    it("2 MessageRefs", () => {
       queryState.addResponseMessageRef(messageRefs[0]);
       queryState.addResponseMessageRef(messageRefs[1]);
 
@@ -33,7 +34,7 @@ describe("QueryState", () => {
       expect(queryState.max?.sequenceNumber).toEqual(messageRefs[1].sequenceNumber);
     });
 
-    it("3 MessageIDs", () => {
+    it("3 MessageRefs", () => {
       queryState.addResponseMessageRef(messageRefs[0]);
       queryState.addResponseMessageRef(messageRefs[1]);
       queryState.addResponseMessageRef(messageRefs[2]);

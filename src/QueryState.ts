@@ -19,7 +19,7 @@ export class QueryState {
     return this._isFinalizedPropagation;
   }
 
-  public get lastPropagatedMessageId() {
+  public get lastPropagatedMessageRef() {
     return this._lastPropagatedMessageRef;
   }
 
@@ -45,7 +45,7 @@ export class QueryState {
   }
 
   public subtract(messageRefs: Iterable<MessageRef>) {
-    const result = new Set<MessageRef>(this._messageRefs.map(m => m));
+    const result = new Set<MessageRef>(this._messageRefs);
 
     for (const messageRef of messageRefs) {
       result.delete(messageRef);
@@ -70,7 +70,7 @@ export class QueryState {
 
   public finalizeResponse() {
     if (this._isFinalizedResponse) {
-      throw new Error("Cannot finalize response, it isalready finalized.")
+      throw new Error("Cannot finalize response, it is already finalized.")
     }
     this._isInitialized = true;
     this._isFinalizedResponse = true;
@@ -78,7 +78,7 @@ export class QueryState {
 
   public finalizePropagation() {
     if (this._isFinalizedPropagation) {
-      throw new Error("Cannot finalize propagation, is is already finalized.")
+      throw new Error("Cannot finalize propagation, it is already finalized.")
     }
     // this._isInitialized = true;
     this._isFinalizedPropagation = true;
