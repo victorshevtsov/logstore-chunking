@@ -1,4 +1,5 @@
 import { MessageRef } from "@streamr/protocol";
+import { SystemMessage, SystemMessageType } from "./SystemMessage";
 
 export enum QueryType {
   Last = 'last',
@@ -52,7 +53,7 @@ interface QueryRequestOptions {
   queryOptions: QueryOptions;
 }
 
-export class QueryRequest {
+export class QueryRequest extends SystemMessage {
   requestId: string;
   consumerId: string;
   streamId: string;
@@ -66,6 +67,8 @@ export class QueryRequest {
     partition,
     queryOptions,
   }: QueryRequestOptions) {
+    super(SystemMessageType.QueryRequest);
+
     // TODO: Validate the arguments
     this.requestId = requestId;
     this.consumerId = consumerId;
