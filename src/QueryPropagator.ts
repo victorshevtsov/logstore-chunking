@@ -5,15 +5,15 @@ import { PassThrough, pipeline } from "stream";
 import { MSG_CHAIN_ID, PUBLISHER_ID } from "../test/test-utils";
 import { minMessageRef } from "./MessageRef";
 import { ChunkCallback, QueryChipper } from "./QueryChipper";
-import { QueryParams } from "./QueryParams";
 import { QueryState } from "./QueryState";
 import { Storage } from "./Storage";
+import { QueryRangeOptions, QueryRequest } from "./protocol/QueryRequest";
 import { QueryResponse } from "./protocol/QueryResponse";
 
 export class QueryPropagator {
 
   private readonly storage: Storage;
-  private readonly queryParams: QueryParams;
+  private readonly queryRequest: QueryRequest;
 
   private readonly primaryNodeState: QueryState;
   private readonly foreignNodeState: QueryState;
@@ -21,19 +21,31 @@ export class QueryPropagator {
 
   constructor(
     storage: Storage,
-    queryParams: QueryParams,
+    queryRequest: QueryRequest,
     responseChunkCallback: ChunkCallback,
     propagationChunkCallback: ChunkCallback
   ) {
     this.storage = storage;
-    this.queryParams = queryParams;
+    this.queryRequest = queryRequest;
 
     this.primaryNodeState = new QueryState();
     this.foreignNodeState = new QueryState();
     this.propagationStream = new PassThrough({ objectMode: true });
 
+    // TODO: review the cast
+    const queryRangeOptions = this.queryRequest.queryOptions as QueryRangeOptions;
+
     pipeline(
-      this.storage.query(this.queryParams),
+      this.storage.query(
+        this.queryRequest.streamId,
+        this.queryRequest.partition,
+        queryRangeOptions.from.timestamp,
+        queryRangeOptions.from.sequenceNumber,
+        queryRangeOptions.to.timestamp,
+        queryRangeOptions.to.sequenceNumber,
+        queryRangeOptions.publisherId,
+        queryRangeOptions.msgChainId
+      ),
       // TODO: Try PassTrhough here instead of data event
       new QueryChipper(responseChunkCallback),
       (err) => {
@@ -97,8 +109,8 @@ export class QueryPropagator {
       if (messaqgeRefs.length) {
         const queryStream = this.storage.queryByMessageIds(
           messaqgeRefs.map(messageRef => new MessageID(
-            toStreamID(this.queryParams.streamId),
-            0, // TODO: streamPartition
+            toStreamID(this.queryRequest.streamId),
+            this.queryRequest.partition,
             messageRef.timestamp,
             messageRef.sequenceNumber,
             toEthereumAddress(PUBLISHER_ID), // TODO: publisherId

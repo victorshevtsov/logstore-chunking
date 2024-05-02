@@ -22,13 +22,13 @@ export class MyTransform extends Transform {
 
     setTimeout(() => {
       callback();
-    }, 1000);
+    }, 100);
   }
 
   private sleepAndPush(chunk: any, callback: Function) {
     setTimeout(() => {
       this.push(chunk);
       callback();
-    }, 1000);
+    }, 100);
   }
 }

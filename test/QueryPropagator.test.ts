@@ -1,22 +1,28 @@
 import { MessageRef } from "@streamr/protocol";
 import { convertStreamMessageToBytes } from "@streamr/trackerless-network";
 import { PassThrough, Readable } from "stream";
-import { QueryParams } from "../src/QueryParams";
 import { QueryPropagator } from "../src/QueryPropagator";
 import { Storage } from "../src/Storage";
-import { STREAM_ID, createQueryResponse, mockStreamMessageRange } from "./test-utils";
+import { QueryRequest, QueryType } from "../src/protocol/QueryRequest";
+import { REQUEST_ID, STREAM_ID, STREAM_PARTITION, createQueryResponse, mockStreamMessageRange } from "./test-utils";
 
 describe("QueryPropagator", () => {
   const data = Array
-    .from(mockStreamMessageRange(100200300, 100200309))
+    .from(mockStreamMessageRange(100200300, 100200303))
     .map(m => convertStreamMessageToBytes(m));
 
-  const requestId = "request-001";
-  const queryParams: QueryParams = {
+  const queryRequest = new QueryRequest({
+    requestId: REQUEST_ID,
+    consumerId: "consumerId",
     streamId: STREAM_ID,
-    from: new MessageRef(1710336591127, 0),
-    to: new MessageRef(1710357184411, 0),
-  };
+    partition: STREAM_PARTITION,
+    queryType: QueryType.Range,
+    queryOptions: {
+      queryType: QueryType.Range,
+      from: new MessageRef(100200300, 0),
+      to: new MessageRef(100200300, 0),
+    }
+  });
 
   let responseChunkCallbackMock: jest.Mock;
   let propagationChunkCallbackMock: jest.Mock;
@@ -39,12 +45,12 @@ describe("QueryPropagator", () => {
         .mockImplementationOnce(() => queryByMessageIdsStreamMock2),
     } as unknown as Storage, { shallow: true });
 
-    queryPropagator = new QueryPropagator(storage, queryParams, responseChunkCallbackMock, propagationChunkCallbackMock);
+    queryPropagator = new QueryPropagator(storage, queryRequest, responseChunkCallbackMock, propagationChunkCallbackMock);
   });
 
   describe("storage has no data", () => {
     test("simple #1", (done) => {
-      queryPropagator.onPrimaryResponse(createQueryResponse(requestId, [], true));
+      queryPropagator.onPrimaryResponse(createQueryResponse(REQUEST_ID, [], true));
 
       queryStreamMock.push(null);
 
@@ -60,7 +66,7 @@ describe("QueryPropagator", () => {
     });
 
     test("simple #2", (done) => {
-      queryPropagator.onPrimaryResponse(createQueryResponse(requestId, [data[0]], true));
+      queryPropagator.onPrimaryResponse(createQueryResponse(REQUEST_ID, [data[0]], true));
 
       queryStreamMock.push(data[0]);
       queryStreamMock.push(null);
@@ -77,7 +83,7 @@ describe("QueryPropagator", () => {
     });
 
     test("simple #5", (done) => {
-      queryPropagator.onPrimaryResponse(createQueryResponse(requestId, [data[0], data[1]], true));
+      queryPropagator.onPrimaryResponse(createQueryResponse(REQUEST_ID, [data[0], data[1]], true));
 
       queryStreamMock.push(data[0]);
       queryStreamMock.push(data[1]);
@@ -95,7 +101,7 @@ describe("QueryPropagator", () => {
     });
 
     test("simple #6", (done) => {
-      queryPropagator.onPrimaryResponse(createQueryResponse(requestId, [], true));
+      queryPropagator.onPrimaryResponse(createQueryResponse(REQUEST_ID, [], true));
 
       queryStreamMock.push(data[0]);
       queryStreamMock.push(null);
@@ -115,7 +121,7 @@ describe("QueryPropagator", () => {
     });
 
     test("simple #7", (done) => {
-      queryPropagator.onPrimaryResponse(createQueryResponse(requestId, [], true));
+      queryPropagator.onPrimaryResponse(createQueryResponse(REQUEST_ID, [], true));
 
       queryStreamMock.push(data[0]);
       queryStreamMock.push(data[1]);
@@ -139,7 +145,7 @@ describe("QueryPropagator", () => {
     });
 
     test("simple #4", (done) => {
-      queryPropagator.onPrimaryResponse(createQueryResponse(requestId, [data[0]], true));
+      queryPropagator.onPrimaryResponse(createQueryResponse(REQUEST_ID, [data[0]], true));
 
       queryStreamMock.push(data[0]);
       queryStreamMock.push(data[1]);

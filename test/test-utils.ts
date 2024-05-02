@@ -7,14 +7,16 @@ import { QueryResponse } from "../src/protocol/QueryResponse";
 
 export const PUBLISHER_ID = "0x19e7e376e7c213b7e7e7e46cc70a5dd086daff2a";
 export const STREAM_ID = `${PUBLISHER_ID}/pulse`;
-export const MSG_CHAIN_ID = "1";
-
+export const STREAM_PARTITION = 0;
+export const MSG_CHAIN_ID = "msgChainId";
+export const REQUEST_ID = "request-001";
+  
 export function createQueryResponse(requestId: string, serializedMessages: Uint8Array[], isFinal: boolean) {
-  const messageIds = serializedMessages.map(serializedMessage =>
+  const messageRefs = serializedMessages.map(serializedMessage =>
     convertBytesToStreamMessage(serializedMessage).messageId.toMessageRef()
   );
 
-  return new QueryResponse(requestId, messageIds, isFinal);
+  return new QueryResponse(requestId, messageRefs, isFinal);
 }
 
 export function createQueryPropagation(requestId: string, serializedMessages: Uint8Array[], isFinal: boolean) {
@@ -23,12 +25,14 @@ export function createQueryPropagation(requestId: string, serializedMessages: Ui
 
 export function mockStreamMessage({
   streamId = STREAM_ID,
+  streamPartition = STREAM_PARTITION,
   timestamp,
   sequenceNumber = 0,
   publisherId = toEthereumAddress(PUBLISHER_ID),
   msgChainId = MSG_CHAIN_ID,
 }: {
   streamId?: string;
+  streamPartition?: number;
   timestamp: number
   sequenceNumber?: number;
   publisherId?: EthereumAddress;
@@ -37,7 +41,7 @@ export function mockStreamMessage({
   return new StreamMessage({
     messageId: new MessageID(
       toStreamID(streamId),
-      0,
+      streamPartition,
       timestamp,
       sequenceNumber,
       publisherId,

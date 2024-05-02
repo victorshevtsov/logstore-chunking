@@ -3,29 +3,29 @@ import { EthereumAddress } from "@streamr/utils";
 import { PassThrough, pipeline } from "stream";
 import { minMessageRef } from "./MessageRef";
 import { ChunkCallback, QueryChipper } from "./QueryChipper";
-import { QueryParams } from "./QueryParams";
 import { QueryState } from "./QueryState";
 import { Storage } from "./Storage";
 import { QueryPropagation } from "./protocol/QueryPropagation";
+import { QueryRangeOptions, QueryRequest } from "./protocol/QueryRequest";
 import { QueryResponse } from "./protocol/QueryResponse";
 
 export class QueryAggregator extends PassThrough {
 
   private readonly storage: Storage;
-  private readonly queryParams: QueryParams;
+  private readonly queryRequest: QueryRequest;
 
   private readonly primaryNodeState: QueryState;
   private readonly foreignNodeStates: Map<EthereumAddress, QueryState>;
 
   constructor(
     storage: Storage,
-    queryParams: QueryParams,
+    queryRequest: QueryRequest,
     onlineNodes: EthereumAddress[],
     chunkCallback: ChunkCallback) {
     super({ objectMode: true });
 
     this.storage = storage;
-    this.queryParams = queryParams;
+    this.queryRequest = queryRequest;
 
     this.primaryNodeState = new QueryState();
     this.foreignNodeStates = new Map(
@@ -34,8 +34,20 @@ export class QueryAggregator extends PassThrough {
       )
     );
 
+    // TODO: review the cast
+    const queryRangeOptions = this.queryRequest.queryOptions as QueryRangeOptions;
+
     pipeline(
-      this.storage.query(this.queryParams),
+      this.storage.query(
+        this.queryRequest.streamId,
+        this.queryRequest.partition,
+        queryRangeOptions.from.timestamp,
+        queryRangeOptions.from.sequenceNumber,
+        queryRangeOptions.to.timestamp,
+        queryRangeOptions.to.sequenceNumber,
+        queryRangeOptions.publisherId,
+        queryRangeOptions.msgChainId
+      ),
       new QueryChipper(chunkCallback),
       (err) => {
         // TODO: Handle error
@@ -120,14 +132,22 @@ export class QueryAggregator extends PassThrough {
     }
 
     if (readyFrom && readyTo) {
-      const queryParams: QueryParams = {
-        ...this.queryParams,
-        from: readyFrom,
-        to: readyTo,
-      };
+
+      // TODO: review the cast
+      const queryRangeOptions = this.queryRequest.queryOptions as QueryRangeOptions;
 
       // TODO: Handle an errror if the pipe gets broken
-      const queryStream = this.storage.query(queryParams);
+      const queryStream = this.storage.query(
+        this.queryRequest.streamId,
+        this.queryRequest.partition,
+        readyFrom.timestamp,
+        readyFrom.sequenceNumber,
+        readyTo.timestamp,
+        readyTo.sequenceNumber,
+        queryRangeOptions.publisherId,
+        queryRangeOptions.msgChainId
+      );
+
       queryStream.pipe(this, { end: isFinalized });
 
       this.primaryNodeState.shrink(readyTo);

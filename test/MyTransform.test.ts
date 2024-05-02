@@ -1,28 +1,28 @@
-import { MessageRef } from "@streamr/protocol";
 import { PassThrough, pipeline } from "stream";
 import { MyTransform } from "../src/MyTransform";
-import { QueryParams } from "../src/QueryParams";
 import { Storage } from "../src/Storage";
-import { fillStorageWithRange } from "./test-utils";
+import { STREAM_ID, STREAM_PARTITION, fillStorageWithRange } from "./test-utils";
 
 describe("MyTransform", () => {
   test("query", (done) => {
 
     const storage = new Storage();
-    fillStorageWithRange(storage, 100200300, 100200399);
-    const queryParams: QueryParams = {
-      streamId: "test-stream",
-      from: new MessageRef(100200300, 0),
-      to: new MessageRef(100200399, 0),
-    };
+    fillStorageWithRange(storage, 100200300, 100200302);
 
-    const queryStream = storage.query(queryParams);
+    const queryStream = storage.query(
+      STREAM_ID,
+      STREAM_PARTITION,
+      100200300,
+      0,
+      100200309,
+      0
+    );
     const myTransformStream = new MyTransform();
     const responseStream = new PassThrough();
 
     pipeline(queryStream, myTransformStream, responseStream, (err) => {
       if (err) {
-        console.error(err); 6
+        console.error(err);
       }
 
       done();
@@ -44,8 +44,8 @@ describe("MyTransform", () => {
     //   console.log("close");
     // })
 
-    // responseStream.on("data", () => {
-    //   console.log("data");
+    // responseStream.on("data", (data) => {
+    //   console.log("data", data);
     // })
 
   });

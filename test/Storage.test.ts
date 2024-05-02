@@ -1,6 +1,5 @@
-import { MessageRef } from "@streamr/protocol";
 import { Storage } from "../src/Storage";
-import { STREAM_ID, fillStorageWithRange, mockStreamMessage } from "./test-utils";
+import { STREAM_ID, STREAM_PARTITION, fillStorageWithRange, mockStreamMessage } from "./test-utils";
 
 describe("Storage", () => {
   const storage = new Storage();
@@ -10,11 +9,14 @@ describe("Storage", () => {
   });
 
   test("query", async () => {
-    const queryStream = storage.query({
-      streamId: STREAM_ID,
-      from: new MessageRef(100200300, 0),
-      to: new MessageRef(100200309, 0),
-    });
+    const queryStream = storage.query(
+      STREAM_ID,
+      STREAM_PARTITION,
+      100200300,
+      0,
+      100200309,
+      0,
+    );
 
     const messages = [];
     for await (const message of queryStream) {
@@ -29,11 +31,14 @@ describe("Storage", () => {
     const msg = mockStreamMessage({ timestamp: 100200300, sequenceNumber: 1 });
     storage.store(msg);
 
-    const queryStream = storage.query({
-      streamId: STREAM_ID,
-      from: new MessageRef(100200300, 1),
-      to: new MessageRef(100200300, 1,),
-    });
+    const queryStream = storage.query(
+      STREAM_ID,
+      STREAM_PARTITION,
+      100200300,
+      1,
+      100200300,
+      1,
+    );
 
     const messages = [];
     for await (const message of queryStream) {
