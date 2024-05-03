@@ -26,10 +26,10 @@ describe("QueryAggregator aggregates messages from", () => {
 
   let responseChunkCallbackMock: jest.Mock;
 
-  let queryStreamMock1: Readable;
-  let queryStreamMock2: Readable;
-  let queryStreamMock3: Readable;
-  let queryStreamMock4: Readable;
+  let queryStreamMock1: PassThrough;
+  let queryStreamMock2: PassThrough;
+  let queryStreamMock3: PassThrough;
+  let queryStreamMock4: PassThrough;
   let responseStreamMock: PassThrough;
   let storage: Storage;
   let queryAggregator: QueryAggregator;
@@ -41,10 +41,10 @@ describe("QueryAggregator aggregates messages from", () => {
     result = [];
 
     responseChunkCallbackMock = jest.fn().mockImplementation();
-    queryStreamMock1 = new Readable({ objectMode: true });
-    queryStreamMock2 = new Readable({ objectMode: true });
-    queryStreamMock3 = new Readable({ objectMode: true });
-    queryStreamMock4 = new Readable({ objectMode: true });
+    queryStreamMock1 = new PassThrough({ objectMode: true });
+    queryStreamMock2 = new PassThrough({ objectMode: true });
+    queryStreamMock3 = new PassThrough({ objectMode: true });
+    queryStreamMock4 = new PassThrough({ objectMode: true });
     responseStreamMock = new PassThrough({ objectMode: true })
       .on("data", (data) => {
         result.push(data)
@@ -151,13 +151,9 @@ describe("QueryAggregator aggregates messages from", () => {
         queryStreamMock1.push(null);
 
         queryStreamMock2.push(data[0]);
+        queryStreamMock2.push(data[1]);
+        queryStreamMock2.push(data[2]);
         queryStreamMock2.push(null);
-
-        queryStreamMock3.push(data[1]);
-        queryStreamMock3.push(null);
-
-        queryStreamMock4.push(data[2]);
-        queryStreamMock4.push(null);
 
         queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[0], data[1], data[2]], true));
       });
@@ -182,13 +178,11 @@ describe("QueryAggregator aggregates messages from", () => {
         queryStreamMock1.push(null);
 
         queryStreamMock2.push(data[0]);
+        queryStreamMock2.push(data[1]);
         queryStreamMock2.push(null);
 
-        queryStreamMock3.push(data[1]);
+        queryStreamMock3.push(data[2]);
         queryStreamMock3.push(null);
-
-        queryStreamMock4.push(data[2]);
-        queryStreamMock4.push(null);
 
         queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[0], data[1]], false));
         queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[2]], true));
@@ -347,13 +341,11 @@ describe("QueryAggregator aggregates messages from", () => {
       queryStreamMock1.push(null);
 
       queryStreamMock2.push(data[0]);
+      queryStreamMock2.push(data[1]);
       queryStreamMock2.push(null);
 
-      queryStreamMock3.push(data[1]);
+      queryStreamMock3.push(data[2]);
       queryStreamMock3.push(null);
-
-      queryStreamMock4.push(data[2]);
-      queryStreamMock4.push(null);
 
       queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[1]], true));
       queryAggregator.onForeignResponse(foreignNode2, createQueryResponse(REQUEST_ID, [data[2]], true));

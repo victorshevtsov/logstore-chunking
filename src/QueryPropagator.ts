@@ -4,8 +4,8 @@ import { toEthereumAddress } from "@streamr/utils";
 import { PassThrough, pipeline } from "stream";
 import { MSG_CHAIN_ID, PUBLISHER_ID } from "../test/test-utils";
 import { minMessageRef } from "./MessageRef";
+import { MessageRefs } from "./MessageRefs";
 import { ChunkCallback, QueryChipper } from "./QueryChipper";
-import { QueryState } from "./QueryState";
 import { Storage } from "./Storage";
 import { QueryRangeOptions, QueryRequest } from "./protocol/QueryRequest";
 import { QueryResponse } from "./protocol/QueryResponse";
@@ -15,8 +15,8 @@ export class QueryPropagator {
   private readonly storage: Storage;
   private readonly queryRequest: QueryRequest;
 
-  private readonly primaryNodeState: QueryState;
-  private readonly foreignNodeState: QueryState;
+  private readonly primaryNodeMessageRefs: MessageRefs;
+  private readonly foreignNodeMessageRefs: MessageRefs;
   private readonly propagationStream: PassThrough;
 
   constructor(
@@ -28,8 +28,8 @@ export class QueryPropagator {
     this.storage = storage;
     this.queryRequest = queryRequest;
 
-    this.primaryNodeState = new QueryState();
-    this.foreignNodeState = new QueryState();
+    this.primaryNodeMessageRefs = new MessageRefs();
+    this.foreignNodeMessageRefs = new MessageRefs();
     this.propagationStream = new PassThrough({ objectMode: true });
 
     // TODO: review the cast
@@ -57,11 +57,11 @@ export class QueryPropagator {
     )
       .on("data", (bytes: Uint8Array) => {
         const message = convertBytesToStreamMessage(bytes);
-        this.foreignNodeState.addResponseMessageRef(message.messageId.toMessageRef());
+        this.foreignNodeMessageRefs.push(message.messageId.toMessageRef());
         this.doCheck();
       })
       .on("end", () => {
-        this.foreignNodeState.finalizeResponse();
+        this.foreignNodeMessageRefs.finalize();
         this.doCheck();
       });
 
@@ -80,32 +80,42 @@ export class QueryPropagator {
   public onPrimaryResponse(response: QueryResponse) {
 
     response.messageRefs.forEach(messageRef => {
-      this.primaryNodeState.addResponseMessageRef(messageRef)
+      this.primaryNodeMessageRefs.push(messageRef)
     });
 
     if (response.isFinal) {
-      this.primaryNodeState.finalizeResponse();
+      this.primaryNodeMessageRefs.finalize();
     }
 
     this.doCheck();
   }
 
   private doCheck() {
-    let isFinalized = this.primaryNodeState.isFinalizedResponse && this.foreignNodeState.isFinalizedResponse;
+    let isFinalized =
+      this.primaryNodeMessageRefs.isFinalized &&
+      this.foreignNodeMessageRefs.isFinalized
 
     if (
-      !this.primaryNodeState.isFinalizedResponse && !this.primaryNodeState.max ||
-      !this.foreignNodeState.isFinalizedResponse && !this.foreignNodeState.max
+      (!this.primaryNodeMessageRefs.isFinalized && !this.primaryNodeMessageRefs.max) ||
+      (!this.foreignNodeMessageRefs.isFinalized && !this.foreignNodeMessageRefs.max)
     ) {
       return;
     }
 
-    const primaryNodeShrink = this.primaryNodeState.isFinalizedResponse ? undefined : this.primaryNodeState.max;
-    const foreignNodeShrink = this.foreignNodeState.isFinalizedResponse ? undefined : this.foreignNodeState.max;
+    const primaryNodeShrink =
+      this.primaryNodeMessageRefs.isFinalized
+        ? undefined
+        : this.primaryNodeMessageRefs.max;
+
+    const foreignNodeShrink =
+      this.foreignNodeMessageRefs.isFinalized
+        ? undefined
+        : this.foreignNodeMessageRefs.max;
+
     const shrinkMessageRef = minMessageRef(primaryNodeShrink, foreignNodeShrink);
 
     if (shrinkMessageRef) {
-      const messaqgeRefs = Array.from(this.foreignNodeState.subtract(this.primaryNodeState));
+      const messaqgeRefs = Array.from(this.foreignNodeMessageRefs.subtract(this.primaryNodeMessageRefs));
       if (messaqgeRefs.length) {
         const queryStream = this.storage.queryByMessageIds(
           messaqgeRefs.map(messageRef => new MessageID(
@@ -118,8 +128,8 @@ export class QueryPropagator {
           )));
         queryStream.pipe(this.propagationStream, { end: isFinalized });
 
-        this.primaryNodeState.shrink(shrinkMessageRef);
-        this.foreignNodeState.shrink(shrinkMessageRef);
+        this.primaryNodeMessageRefs.shrink(shrinkMessageRef);
+        this.foreignNodeMessageRefs.shrink(shrinkMessageRef);
       }
     } else if (isFinalized) {
       this.propagationStream.end();
