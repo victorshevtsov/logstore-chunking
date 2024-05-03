@@ -1,7 +1,7 @@
 import { MessageRef } from "@streamr/protocol";
 import { convertStreamMessageToBytes } from "@streamr/trackerless-network";
 import { toEthereumAddress } from "@streamr/utils";
-import { PassThrough, Readable, pipeline } from "stream";
+import { PassThrough, pipeline } from "stream";
 import { QueryAggregator } from "../src/QueryAggregator";
 import { Storage } from "../src/Storage";
 import { QueryRequest, QueryType } from "../src/protocol/QueryRequest";
@@ -131,7 +131,7 @@ describe("QueryAggregator aggregates messages from", () => {
     });
 
     describe("if the primary node has the same data as the foreign node", () => {
-      test("and the foreign node responds with a single response", (done) => {
+      test("and the foreign node responds with 1 response", (done) => {
         pipeline(queryAggregator, responseStreamMock, (err) => {
           try {
             expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
@@ -245,27 +245,82 @@ describe("QueryAggregator aggregates messages from", () => {
       queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [], true));
     });
 
-    test("if the primary node does not have data for the query but the foreign node does", (done) => {
-      pipeline(queryAggregator, responseStreamMock, (err) => {
-        try {
-          expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
-          expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [], true);
+    describe("if the primary node does not have data for the query", () => {
 
-          expect(result).toEqual([data[0]]);
+      test("and the foreign node has 1 message to propagate", (done) => {
+        pipeline(queryAggregator, responseStreamMock, (err) => {
+          try {
+            expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
+            expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [], true);
 
-          done(err);
-        } catch (e) {
-          done(e);
-        }
+            expect(result).toEqual([data[0]]);
+
+            done(err);
+          } catch (e) {
+            done(e);
+          }
+        });
+
+        queryStreamMock1.push(null);
+
+        queryStreamMock2.push(data[0]);
+        queryStreamMock2.push(null);
+
+        queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[0]], true));
+        queryAggregator.onPropagation(foreignNode1, createQueryPropagation(REQUEST_ID, [data[0]], true));
       });
 
-      queryStreamMock1.push(null);
+      describe("and the foreign node has 2 message to propagate", () => {
 
-      queryStreamMock2.push(data[0]);
-      queryStreamMock2.push(null);
+        test("the foreign node propagates with 1 message", (done) => {
+          pipeline(queryAggregator, responseStreamMock, (err) => {
+            try {
+              expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
+              expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [], true);
 
-      queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[0]], true));
-      queryAggregator.onPropagation(foreignNode1, createQueryPropagation(REQUEST_ID, [data[0]], true));
+              expect(result).toEqual([data[0], data[1]]);
+
+              done(err);
+            } catch (e) {
+              done(e);
+            }
+          });
+
+          queryStreamMock1.push(null);
+
+          queryStreamMock2.push(data[0]);
+          queryStreamMock2.push(data[1]);
+          queryStreamMock2.push(null);
+
+          queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[0], data[1]], true));
+          queryAggregator.onPropagation(foreignNode1, createQueryPropagation(REQUEST_ID, [data[0], data[1]], true));
+        });
+
+        test("the foreign node propagates with 2 messages", (done) => {
+          pipeline(queryAggregator, responseStreamMock, (err) => {
+            try {
+              expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
+              expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [], true);
+
+              expect(result).toEqual([data[0], data[1]]);
+
+              done(err);
+            } catch (e) {
+              done(e);
+            }
+          });
+
+          queryStreamMock1.push(null);
+
+          queryStreamMock2.push(data[0]);
+          queryStreamMock2.push(data[1]);
+          queryStreamMock2.push(null);
+
+          queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[0], data[1]], true));
+          queryAggregator.onPropagation(foreignNode1, createQueryPropagation(REQUEST_ID, [data[0]], false));
+          queryAggregator.onPropagation(foreignNode1, createQueryPropagation(REQUEST_ID, [data[1]], true));
+        });
+      });
     });
   });
 
@@ -349,6 +404,150 @@ describe("QueryAggregator aggregates messages from", () => {
 
       queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[1]], true));
       queryAggregator.onForeignResponse(foreignNode2, createQueryResponse(REQUEST_ID, [data[2]], true));
+    });
+
+    describe("if the primary node does not have data for the query", () => {
+
+      test("and the foreign nodes have 1 message to propagate", (done) => {
+        pipeline(queryAggregator, responseStreamMock, (err) => {
+          try {
+            expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
+            expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [], true);
+
+            expect(result).toEqual([data[0]]);
+
+            done(err);
+          } catch (e) {
+            done(e);
+          }
+        });
+
+        queryStreamMock1.push(null);
+
+        queryStreamMock2.push(data[0]);
+        queryStreamMock2.push(null);
+
+        queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[0]], true));
+        queryAggregator.onForeignResponse(foreignNode2, createQueryResponse(REQUEST_ID, [data[0]], true));
+        queryAggregator.onPropagation(foreignNode1, createQueryPropagation(REQUEST_ID, [data[0]], true));
+        queryAggregator.onPropagation(foreignNode2, createQueryPropagation(REQUEST_ID, [data[0]], true));
+      });
+
+      describe("and the foreign nodes have 2 identical messages to propagate", () => {
+
+        test("the foreign nodes propagate with 1 message", (done) => {
+          pipeline(queryAggregator, responseStreamMock, (err) => {
+            try {
+              expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
+              expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [], true);
+
+              expect(result).toEqual([data[0], data[1]]);
+
+              done(err);
+            } catch (e) {
+              done(e);
+            }
+          });
+
+          queryStreamMock1.push(null);
+
+          queryStreamMock2.push(data[0]);
+          queryStreamMock2.push(data[1]);
+          queryStreamMock2.push(null);
+
+          queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[0], data[1]], true));
+          queryAggregator.onForeignResponse(foreignNode2, createQueryResponse(REQUEST_ID, [data[0], data[1]], true));
+          queryAggregator.onPropagation(foreignNode1, createQueryPropagation(REQUEST_ID, [data[0], data[1]], true));
+          queryAggregator.onPropagation(foreignNode2, createQueryPropagation(REQUEST_ID, [data[0], data[1]], true));
+        });
+
+        test("the foreign nodes propagate with 2 messages", (done) => {
+          pipeline(queryAggregator, responseStreamMock, (err) => {
+            try {
+              expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
+              expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [], true);
+
+              expect(result).toEqual([data[0], data[1]]);
+
+              done(err);
+            } catch (e) {
+              done(e);
+            }
+          });
+
+          queryStreamMock1.push(null);
+
+          queryStreamMock2.push(data[0]);
+          queryStreamMock2.push(data[1]);
+          queryStreamMock2.push(null);
+
+          queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[0], data[1]], true));
+          queryAggregator.onForeignResponse(foreignNode2, createQueryResponse(REQUEST_ID, [data[0], data[1]], true));
+          queryAggregator.onPropagation(foreignNode1, createQueryPropagation(REQUEST_ID, [data[0]], false));
+          queryAggregator.onPropagation(foreignNode1, createQueryPropagation(REQUEST_ID, [data[1]], true));
+          queryAggregator.onPropagation(foreignNode2, createQueryPropagation(REQUEST_ID, [data[0]], false));
+          queryAggregator.onPropagation(foreignNode2, createQueryPropagation(REQUEST_ID, [data[1]], true));
+        });
+      });
+
+      describe("and the foreign nodes have 1 identical message and 2 different messages to propagate", () => {
+
+        test("the foreign nodes propagate with 1 message", (done) => {
+          pipeline(queryAggregator, responseStreamMock, (err) => {
+            try {
+              expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
+              expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [], true);
+
+              expect(result).toEqual([data[0], data[1], data[2]]);
+
+              done(err);
+            } catch (e) {
+              done(e);
+            }
+          });
+
+          queryStreamMock1.push(null);
+
+          queryStreamMock2.push(data[0]);
+          queryStreamMock2.push(data[1]);
+          queryStreamMock2.push(data[2]);
+          queryStreamMock2.push(null);
+
+          queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[0], data[1]], true));
+          queryAggregator.onForeignResponse(foreignNode2, createQueryResponse(REQUEST_ID, [data[0], data[2]], true));
+          queryAggregator.onPropagation(foreignNode1, createQueryPropagation(REQUEST_ID, [data[0], data[1]], true));
+          queryAggregator.onPropagation(foreignNode2, createQueryPropagation(REQUEST_ID, [data[0], data[2]], true));
+        });
+
+        test("the foreign nodes propagate with 2 messages", (done) => {
+          pipeline(queryAggregator, responseStreamMock, (err) => {
+            try {
+              expect(responseChunkCallbackMock).toHaveBeenCalledTimes(1);
+              expect(responseChunkCallbackMock).toHaveBeenNthCalledWith(1, [], true);
+
+              expect(result).toEqual([data[0], data[1], data[2]]);
+
+              done(err);
+            } catch (e) {
+              done(e);
+            }
+          });
+
+          queryStreamMock1.push(null);
+
+          queryStreamMock2.push(data[0]);
+          queryStreamMock2.push(data[1]);
+          queryStreamMock2.push(data[2]);
+          queryStreamMock2.push(null);
+
+          queryAggregator.onForeignResponse(foreignNode1, createQueryResponse(REQUEST_ID, [data[0], data[1]], true));
+          queryAggregator.onForeignResponse(foreignNode2, createQueryResponse(REQUEST_ID, [data[0], data[2]], true));
+          queryAggregator.onPropagation(foreignNode1, createQueryPropagation(REQUEST_ID, [data[0]], false));
+          queryAggregator.onPropagation(foreignNode1, createQueryPropagation(REQUEST_ID, [data[1]], true));
+          queryAggregator.onPropagation(foreignNode2, createQueryPropagation(REQUEST_ID, [data[0]], false));
+          queryAggregator.onPropagation(foreignNode2, createQueryPropagation(REQUEST_ID, [data[2]], true));
+        });
+      });
     });
   });
 });
