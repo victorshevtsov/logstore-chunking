@@ -38,7 +38,7 @@ export class QueryAggregator extends PassThrough {
     const queryRangeOptions = this.queryRequest.queryOptions as QueryRangeOptions;
 
     pipeline(
-      this.storage.query(
+      this.storage.queryRange(
         this.queryRequest.streamId,
         this.queryRequest.partition,
         queryRangeOptions.from.timestamp,
@@ -95,7 +95,7 @@ export class QueryAggregator extends PassThrough {
 
     Promise
       .all(
-        response.payload.map(async (bytes) => {
+        response.payload.map(async (bytes: Uint8Array) => {
           const message = convertBytesToStreamMessage(bytes);
           await this.storage.store(message);
 
@@ -142,7 +142,7 @@ export class QueryAggregator extends PassThrough {
       const queryRangeOptions = this.queryRequest.queryOptions as QueryRangeOptions;
 
       // TODO: Handle an errror if the pipe gets broken
-      const queryStream = this.storage.query(
+      const queryStream = this.storage.queryRange(
         this.queryRequest.streamId,
         this.queryRequest.partition,
         readyFrom.timestamp,

@@ -36,7 +36,7 @@ export class QueryPropagator {
     const queryRangeOptions = this.queryRequest.queryOptions as QueryRangeOptions;
 
     pipeline(
-      this.storage.query(
+      this.storage.queryRange(
         this.queryRequest.streamId,
         this.queryRequest.partition,
         queryRangeOptions.from.timestamp,

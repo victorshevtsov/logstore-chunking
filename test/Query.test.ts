@@ -3,11 +3,11 @@ import { Storage } from "../src/Storage";
 import { STREAM_ID, STREAM_PARTITION, fillStorageWithRange } from "./test-utils";
 
 describe("Query", () => {
-  test("simple", (done) => {
+  test("Range", (done) => {
     const storage = new Storage();
     fillStorageWithRange(storage, 100200300, 100200309);
 
-    const queryStream = storage.query(
+    const queryStream = storage.queryRange(
       STREAM_ID,
       STREAM_PARTITION,
       100200301,

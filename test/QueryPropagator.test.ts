@@ -38,7 +38,7 @@ describe("QueryPropagator", () => {
     queryByMessageIdsStreamMock2 = new PassThrough({ objectMode: true });
 
     const storage = jest.mocked<Storage>({
-      query: jest.fn().mockImplementation(() => queryStreamMock),
+      queryRange: jest.fn().mockImplementation(() => queryStreamMock),
       queryByMessageIds: jest.fn()
         .mockImplementationOnce(() => queryByMessageIdsStreamMock1)
         .mockImplementationOnce(() => queryByMessageIdsStreamMock2),

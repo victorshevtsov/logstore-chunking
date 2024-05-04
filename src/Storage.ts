@@ -24,7 +24,7 @@ export class Storage {
     });
   }
 
-  public query(
+  public queryRange(
     streamId: string,
     partition: number,
     fromTimestamp: number,
@@ -39,7 +39,7 @@ export class Storage {
       Readable.from(this.data),
       new Transform({
         objectMode: true,
-        transform(chunk, encoding, callback) {
+        transform(chunk, _encoding, callback) {
           try {
             const message = convertBytesToStreamMessage(chunk);
             const messageId = message.messageId;
@@ -80,7 +80,7 @@ export class Storage {
       Readable.from(this.data),
       new Transform({
         objectMode: true,
-        transform(chunk, encoding, callback) {
+        transform(chunk, _encoding, callback) {
           try {
             const message = convertBytesToStreamMessage(chunk);
             const messageId = message.messageId;
@@ -91,6 +91,44 @@ export class Storage {
             callback();
           } catch (err) {
             callback(err as Error);
+          }
+        },
+      }),
+      (err) => {
+        if (err) {
+          console.error(err);
+        }
+      }
+    );
+  }
+
+  public queryLast(
+    streamId: string,
+    partition: number,
+    requestCount: number
+  ): Readable {
+    let count = 0;
+    return pipeline(
+      Readable.from([...this.data].reverse()),
+      new Transform({
+        objectMode: true,
+        transform(chunk, _encoding, callback) {
+          if (count < requestCount) { // TODO: review the logic
+            try {
+              const message = convertBytesToStreamMessage(chunk);
+              const messageId = message.messageId;
+
+              if (
+                messageId.streamId === streamId &&
+                messageId.streamPartition === partition
+              ) {
+                this.push(chunk);
+                count++;
+              }
+              callback();
+            } catch (err) {
+              callback(err as Error);
+            }
           }
         },
       }),

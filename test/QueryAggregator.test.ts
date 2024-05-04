@@ -51,7 +51,7 @@ describe("QueryAggregator aggregates messages from", () => {
       });
 
     storage = jest.mocked<Storage>({
-      query: jest.fn()
+      queryRange: jest.fn()
         // .mockImplementation(() => queryStreamMock1),
         .mockImplementationOnce(() => queryStreamMock1)
         .mockImplementationOnce(() => queryStreamMock2)

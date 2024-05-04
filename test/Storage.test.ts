@@ -9,7 +9,7 @@ describe("Storage", () => {
   });
 
   test("query", async () => {
-    const queryStream = storage.query(
+    const queryStream = storage.queryRange(
       STREAM_ID,
       STREAM_PARTITION,
       100200300,
@@ -31,7 +31,7 @@ describe("Storage", () => {
     const msg = mockStreamMessage({ timestamp: 100200300, sequenceNumber: 1 });
     storage.store(msg);
 
-    const queryStream = storage.query(
+    const queryStream = storage.queryRange(
       STREAM_ID,
       STREAM_PARTITION,
       100200300,
