@@ -3,11 +3,11 @@ import { EthereumAddress } from "@streamr/utils";
 import { PassThrough, pipeline } from "stream";
 import { minMessageRef } from "./MessageRef";
 import { MessageRefs } from "./MessageRefs";
-import { ChunkCallback, QueryChipper } from "./QueryChipper";
-import { Storage } from "./Storage";
 import { QueryPropagation } from "./protocol/QueryPropagation";
 import { QueryRangeOptions, QueryRequest } from "./protocol/QueryRequest";
 import { QueryResponse } from "./protocol/QueryResponse";
+import { ChunkCallback, QueryChipper } from "./QueryChipper";
+import { Storage } from "./Storage";
 
 export class QueryAggregator extends PassThrough {
 
@@ -21,7 +21,7 @@ export class QueryAggregator extends PassThrough {
     storage: Storage,
     queryRequest: QueryRequest,
     onlineNodes: EthereumAddress[],
-    chunkCallback: ChunkCallback) {
+    chunkCallback: ChunkCallback<Uint8Array>) {
     super({ objectMode: true });
 
     this.storage = storage;
@@ -48,7 +48,7 @@ export class QueryAggregator extends PassThrough {
         queryRangeOptions.publisherId,
         queryRangeOptions.msgChainId
       ),
-      new QueryChipper(chunkCallback),
+      new QueryChipper<Uint8Array>(chunkCallback),
       (err) => {
         // TODO: Handle error
       }

@@ -3,22 +3,22 @@ import { PassThrough, TransformCallback } from "stream";
 const LENGTH_LIMIT = 1000;
 const SIZE_LIMIT = 1024 * 1024;
 
-export type ChunkCallback = (chunk: any[], isFinal: boolean) => void;
+export type ChunkCallback<T> = (chunk: T[], isFinal: boolean) => void;
 
 interface ChunkOptions {
   lengthLimit?: number;
   sizeLimit?: number;
 }
 
-export class QueryChipper extends PassThrough {
+export class QueryChipper<T> extends PassThrough {
   private readonly lengthLimit: number;
   private readonly sizeLimit: number;
-  private readonly chunkCallback: ChunkCallback;
+  private readonly chunkCallback: ChunkCallback<T>;
   private readonly chunk: any[] = [];
   private chunkSize: number = 0;
 
   constructor(
-    chunkCallback: ChunkCallback,
+    chunkCallback: ChunkCallback<T>,
     {
       lengthLimit = LENGTH_LIMIT,
       sizeLimit = SIZE_LIMIT,

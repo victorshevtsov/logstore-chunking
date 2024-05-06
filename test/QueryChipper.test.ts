@@ -4,7 +4,7 @@ import { QueryChipper } from "../src/QueryChipper";
 describe("QueryChipper", () => {
   let chunkCallback: jest.Mock;
   let sourceStreamMock: PassThrough;
-  let queryChipper: QueryChipper;
+  let queryChipper: QueryChipper<string>;
 
   beforeEach(() => {
     chunkCallback = jest.fn().mockImplementation();

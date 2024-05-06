@@ -1,4 +1,4 @@
-import { MessageID, toStreamID } from "@streamr/protocol";
+import { MessageID, MessageRef, toStreamID } from "@streamr/protocol";
 import { convertBytesToStreamMessage } from "@streamr/trackerless-network";
 import { toEthereumAddress } from "@streamr/utils";
 import { PassThrough, pipeline } from "stream";
@@ -22,8 +22,8 @@ export class QueryPropagator {
   constructor(
     storage: Storage,
     queryRequest: QueryRequest,
-    responseChunkCallback: ChunkCallback,
-    propagationChunkCallback: ChunkCallback
+    responseChunkCallback: ChunkCallback<MessageRef>,
+    propagationChunkCallback: ChunkCallback<Uint8Array>
   ) {
     this.storage = storage;
     this.queryRequest = queryRequest;
@@ -47,7 +47,7 @@ export class QueryPropagator {
         queryRangeOptions.msgChainId
       ),
       // TODO: Try PassTrhough here instead of data event
-      new QueryChipper(responseChunkCallback),
+      new QueryChipper<MessageRef>(responseChunkCallback),
       (err) => {
         if (err) {
           // TODO: Handle error
