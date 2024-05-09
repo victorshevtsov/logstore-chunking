@@ -1,9 +1,9 @@
-import { MessageID, StreamMessage } from '@streamr/protocol';
+import { MessageID, MessageRef, StreamMessage } from '@streamr/protocol';
 import { convertBytesToStreamMessage, convertStreamMessageToBytes } from '@streamr/trackerless-network';
 import { Readable, Transform, pipeline } from "stream";
-import { MAX_SEQUENCE_NUMBER_VALUE, MIN_SEQUENCE_NUMBER_VALUE } from './MessageRef';
+import { MAX_SEQUENCE_NUMBER_VALUE, MIN_SEQUENCE_NUMBER_VALUE } from './LogStore';
 
-export class Storage {
+export class DatabaseAdapter {
   private readonly data: Uint8Array[];
 
   constructor(data: Uint8Array[] = []) {
@@ -86,6 +86,42 @@ export class Storage {
             const messageId = message.messageId;
 
             if (messageIds.includes(messageId)) {
+              this.push(message);
+            }
+            callback();
+          } catch (err) {
+            callback(err as Error);
+          }
+        },
+      }),
+      (err) => {
+        if (err) {
+          console.error(err);
+        }
+      }
+    );
+  }
+
+  public queryByMessageRefs(
+    streamId: string,
+    partition: number,
+    messageRefs: MessageRef[]
+  ): Readable {
+    return pipeline(
+      Readable.from(this.data),
+      new Transform({
+        objectMode: true,
+        transform(chunk, _encoding, callback) {
+          try {
+            const message = convertBytesToStreamMessage(chunk);
+            const messageId = message.messageId;
+            const messageRef = messageId.toMessageRef();
+
+            if (
+              messageId.streamId === streamId &&
+              messageId.streamPartition === partition &&
+              messageRefs.find(ref => ref.compareTo(messageRef))
+            ) {
               this.push(message);
             }
             callback();

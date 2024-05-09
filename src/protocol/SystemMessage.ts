@@ -1,7 +1,7 @@
 export enum SystemMessageType {
   QueryRequest = 1,
   QueryResponse = 2,
-  QueryPropagation = 3,
+  QueryPropagate = 3,
 
 } export class SystemMessage {
 

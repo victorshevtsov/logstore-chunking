@@ -1,8 +1,8 @@
 import { ContentType, EncryptionType, MessageID, SignatureType, StreamMessage, toStreamID } from "@streamr/protocol";
 import { convertBytesToStreamMessage } from "@streamr/trackerless-network";
 import { EthereumAddress, hexToBinary, toEthereumAddress, utf8ToBinary } from "@streamr/utils";
-import { Storage } from "../src/Storage";
-import { QueryPropagation } from "../src/protocol/QueryPropagation";
+import { DatabaseAdapter } from "../src/DatabaseAdapter";
+import { QueryPropagate } from "../src/protocol/QueryPropagate";
 import { QueryResponse } from "../src/protocol/QueryResponse";
 
 export const PUBLISHER_ID = "0x19e7e376e7c213b7e7e7e46cc70a5dd086daff2a";
@@ -19,8 +19,8 @@ export function createQueryResponse(requestId: string, serializedMessages: Uint8
   return new QueryResponse(requestId, messageRefs, isFinal);
 }
 
-export function createQueryPropagation(requestId: string, serializedMessages: Uint8Array[], isFinal: boolean) {
-  return new QueryPropagation(requestId, serializedMessages, isFinal);
+export function createQueryPropagate(requestId: string, serializedMessages: Uint8Array[]) {
+  return new QueryPropagate(requestId, serializedMessages);
 }
 
 export function mockStreamMessage({
@@ -61,7 +61,7 @@ export function* mockStreamMessageRange(from: number, to: number) {
   }
 }
 
-export function fillStorageWithRange(storage: Storage, from: number, to: number) {
+export function fillStorageWithRange(storage: DatabaseAdapter, from: number, to: number) {
   for (const streamMessage of mockStreamMessageRange(from, to)) {
     storage.store(streamMessage);
   }

@@ -1,15 +1,15 @@
 import { PassThrough, pipeline } from "stream";
 import { MyTransform } from "../src/MyTransform";
-import { Storage } from "../src/Storage";
+import { DatabaseAdapter } from "../src/DatabaseAdapter";
 import { STREAM_ID, STREAM_PARTITION, fillStorageWithRange } from "./test-utils";
 
 describe("MyTransform", () => {
   test("query", (done) => {
 
-    const storage = new Storage();
-    fillStorageWithRange(storage, 100200300, 100200302);
+    const database = new DatabaseAdapter();
+    fillStorageWithRange(database, 100200300, 100200302);
 
-    const queryStream = storage.queryRange(
+    const queryStream = database.queryRange(
       STREAM_ID,
       STREAM_PARTITION,
       100200300,

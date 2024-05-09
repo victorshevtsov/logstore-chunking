@@ -1,13 +1,13 @@
 import { PassThrough, pipeline } from "stream";
-import { Storage } from "../src/Storage";
+import { DatabaseAdapter } from "../src/DatabaseAdapter";
 import { STREAM_ID, STREAM_PARTITION, fillStorageWithRange } from "./test-utils";
 
 describe("Query", () => {
   test("Range", (done) => {
-    const storage = new Storage();
-    fillStorageWithRange(storage, 100200300, 100200309);
+    const database = new DatabaseAdapter();
+    fillStorageWithRange(database, 100200300, 100200309);
 
-    const queryStream = storage.queryRange(
+    const queryStream = database.queryRange(
       STREAM_ID,
       STREAM_PARTITION,
       100200301,

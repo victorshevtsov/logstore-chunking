@@ -1,15 +1,15 @@
-import { Storage } from "../src/Storage";
+import { DatabaseAdapter } from "../src/DatabaseAdapter";
 import { STREAM_ID, STREAM_PARTITION, fillStorageWithRange, mockStreamMessage } from "./test-utils";
 
-describe("Storage", () => {
-  const storage = new Storage();
+describe("DatabaseAdapter", () => {
+  const databaseAdapter = new DatabaseAdapter();
 
   beforeEach(() => {
-    fillStorageWithRange(storage, 100200300, 100200400);
+    fillStorageWithRange(databaseAdapter, 100200300, 100200400);
   });
 
   test("query", async () => {
-    const queryStream = storage.queryRange(
+    const queryStream = databaseAdapter.queryRange(
       STREAM_ID,
       STREAM_PARTITION,
       100200300,
@@ -18,7 +18,7 @@ describe("Storage", () => {
       0,
     );
 
-    const messages = [];
+    const messages: any[] = [];
     for await (const message of queryStream) {
       messages.push(message);
     }
@@ -29,9 +29,9 @@ describe("Storage", () => {
   test("query", async () => {
 
     const msg = mockStreamMessage({ timestamp: 100200300, sequenceNumber: 1 });
-    storage.store(msg);
+    databaseAdapter.store(msg);
 
-    const queryStream = storage.queryRange(
+    const queryStream = databaseAdapter.queryRange(
       STREAM_ID,
       STREAM_PARTITION,
       100200300,
@@ -40,7 +40,7 @@ describe("Storage", () => {
       1,
     );
 
-    const messages = [];
+    const messages: any[] = [];
     for await (const message of queryStream) {
       messages.push(message);
     }
